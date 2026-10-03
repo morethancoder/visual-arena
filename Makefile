@@ -16,7 +16,7 @@ VERSION ?=
 SKILL_DIR ?= $(HOME)/.claude/skills/arena
 
 .DEFAULT_GOAL := help
-.PHONY: help dev serve launch demo-run fixture export build lab check install-skill release clean
+.PHONY: help dev fake-live serve launch demo-run fixture export build lab check install-skill release clean
 
 help: ## Show this list
 	@echo "The Arena: a game viewer for the /arena Claude Code skill"
@@ -25,9 +25,12 @@ help: ## Show this list
 	@echo
 	@echo "Settings: ROOT=$(ROOT) PORT=$(PORT) MODEL=$(MODEL) AGENTS=$(AGENTS) SEED=$(SEED) PACE=$(PACE)"
 
-dev: ## Watch a fake run being written live (no tokens): edit app/ and refresh the page
+dev: ## Run the viewer on ROOT/.arena (your real runs); edit app/ and refresh the page
+	$(PY) viewer.py --root $(ROOT) --port $(PORT) --model $(MODEL) --skill $(SKILL)
+
+fake-live: ## Watch a fake run being written live into DEV/live (no tokens)
 	@rm -rf $(DEV)/live && mkdir -p $(DEV)/live
-	@echo "Writing a $(AGENTS)-agent run in real time into $(DEV)/live (one wave every $(PACE)s)"
+	@echo "Writing a fake $(AGENTS)-agent run in real time into $(DEV)/live (one wave every $(PACE)s)"
 	@trap 'kill $$FIX 2>/dev/null' EXIT INT TERM; \
 	$(PY) tools/make_fixture.py --agents $(AGENTS) --seed $(SEED) --live $(PACE) --out $(DEV)/live > $(DEV)/fixture.log 2>&1 & FIX=$$!; \
 	$(PY) viewer.py --root $(DEV)/live --port $(PORT) --model $(MODEL)

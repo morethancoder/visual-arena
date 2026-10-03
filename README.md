@@ -21,14 +21,15 @@ pixel-art colosseum you can watch live, leave, and come back to.
 ## Quick start
 
 ```bash
-make dev        # watch a fake run being written live, no Claude Code or tokens needed
-make serve      # watch real runs: make serve ROOT=~/my-project
+make dev        # the viewer on ./.arena, your real runs (ROOT=~/my-project for another folder)
+make fake-live  # watch a fake run being written live, no Claude Code or tokens needed
 make            # list every command
 ```
 
 | command | what it does |
 | --- | --- |
-| `make dev` | writes a fake run in real time into `.dev/live` and serves it on :8765. Edit `app/` and refresh. Ctrl-C stops both |
+| `make dev` | serves your real runs from `ROOT/.arena` (default: this folder) on :8765. Edit `app/` and refresh |
+| `make fake-live` | writes a fake run in real time into `.dev/live` and serves it, no tokens. Ctrl-C stops both |
 | `make serve` | watches `ROOT/.arena` (`ROOT=~/my-project`, `PORT=`, `MODEL=opus`, `SKILL=arena-skill:arena`) |
 | `make launch` | same, and the lobby's Start button runs Claude Code for you (spends tokens) |
 | `make demo-run` | serves a finished fake run to replay (`AGENTS=`, `SEED=`) |
