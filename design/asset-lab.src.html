@@ -1,108 +1,149 @@
 <title>Arena Asset Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jacquard+24&family=Pixelify+Sans:wght@400;600&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;600&family=Jacquard+24&display=swap" rel="stylesheet">
 <style>
-  /* Layout: one centred column of labelled test benches, each a pixel canvas with its controls underneath. */
+  /* Layout: one centred column of test benches. Game canvases sit on top; everything you read sits in solid panels below them. */
   :root {
     color-scheme: dark;
-    --night: #16131a;
-    --stone: #26212c;
-    --stone-2: #3a3340;
-    --parchment: #f4ecd8;
-    --ink: #241b14;
+    --night: #15121a;
+    --panel: #221d29;
+    --panel-2: #2c2633;
+    --line: #3d3546;
+    --text: #f1eadb;
+    --muted: #b5ab9b;
     --gold: #e8c14a;
-    --muted: #a69d8e;
-    --blood: #d8574a;
+    --blood: #e0584b;
     --heal: #6fd08c;
+    --steel: #b9c3cc;
+    --rebut: #7fb2ec;
+    --major: #f2a33a;
     --display: 'Jacquard 24', 'Old English Text MT', serif;
-    --ui: 'Pixelify Sans', ui-rounded, system-ui, sans-serif;
-    --mono: 'VT323', ui-monospace, monospace;
+    --ui: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--night); color: var(--parchment); font-family: var(--ui); font-size: 16px; line-height: 1.45; }
-  main { max-width: 1000px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 80px; }
+  body { margin: 0; background: var(--night); color: var(--text); font-family: var(--ui); font-size: 16px; line-height: 1.5; }
+  main { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 80px; }
   h1, h2 { font-family: var(--display); font-weight: 400; color: var(--gold); margin: 0; text-wrap: balance; }
   h1 { font-size: clamp(44px, 9vw, 76px); line-height: 1; }
-  h2 { font-size: clamp(30px, 5vw, 40px); margin-top: 56px; }
+  h2 { font-size: clamp(32px, 5vw, 42px); margin-top: 56px; line-height: 1.1; }
   p { max-width: 68ch; }
-  .lede { color: var(--muted); }
-  .note { color: var(--muted); font-size: 14px; }
+  .lede { color: var(--muted); font-size: 17px; }
+  .note { color: var(--muted); font-size: 15px; }
   canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  code { font-family: var(--mono); font-size: 14px; background: var(--panel-2); padding: 1px 5px; border-radius: 3px; }
   .scroll { overflow-x: auto; margin-top: 14px; }
   .builds { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
-  .builds div { background: var(--stone); border-left: 4px solid var(--gold); padding: 10px 12px; min-width: 0; }
-  .builds b { color: var(--gold); font-weight: 600; }
-  .builds span { display: block; font-size: 14px; color: var(--muted); }
-  .bench { position: relative; margin-top: 14px; border: 4px solid var(--stone-2); background: #000; }
-  .bench canvas { width: 100%; height: auto; cursor: pointer; }
-  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
-  .seg { display: inline-flex; border: 3px solid var(--ink); box-shadow: 3px 3px 0 #000; }
-  .seg button { border: 0; box-shadow: none; border-right: 3px solid var(--ink); }
+  .builds div { background: var(--panel); border-left: 4px solid var(--gold); padding: 10px 12px; min-width: 0; }
+  .builds b { color: var(--gold); }
+  .builds span { display: block; font-size: 15px; color: var(--muted); }
+
+  /* controls */
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 12px; }
+  .group { display: inline-flex; align-items: center; gap: 8px; }
+  .label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .seg { display: inline-flex; border: 2px solid #000; box-shadow: 2px 2px 0 #000; }
+  .seg button { border: 0; box-shadow: none; border-right: 2px solid #000; }
   .seg button:last-child { border-right: 0; }
   button {
-    font: inherit; font-size: 15px; color: var(--ink); background: var(--parchment); border: 3px solid var(--ink);
-    padding: 4px 12px; cursor: pointer; box-shadow: 3px 3px 0 #000;
+    font: 700 14px/1 var(--ui); color: #1d160f; background: #e9e0cc; border: 2px solid #000;
+    padding: 7px 11px; cursor: pointer; box-shadow: 2px 2px 0 #000;
   }
   button[aria-pressed="true"] { background: var(--gold); }
-  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
-  .label { font-size: 13px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-right: 2px; }
-  .status { font-family: var(--mono); font-size: 21px; color: var(--gold); margin-top: 10px; min-height: 1.2em; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  button.primary { background: var(--gold); min-width: 74px; }
+
+  /* game screens */
+  .bench { position: relative; margin-top: 14px; border: 3px solid #000; outline: 3px solid var(--line); background: #000; }
+  .bench canvas { width: 100%; height: auto; cursor: pointer; }
   .overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
   .banner {
-    position: absolute; left: 50%; top: 16%; transform: translateX(-50%); white-space: nowrap;
-    font-family: var(--display); font-size: clamp(30px, 7vw, 64px); color: var(--gold); text-shadow: 3px 3px 0 #000, -1px -1px 0 #000;
+    position: absolute; left: 50%; top: 14%; transform: translateX(-50%); white-space: nowrap;
+    font-family: var(--display); font-size: clamp(30px, 7vw, 64px); color: var(--gold);
+    text-shadow: 3px 3px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
     animation: pop 2.2s steps(6) forwards;
   }
   .banner.red { color: var(--blood); }
   @keyframes pop { 0% { opacity: 0; transform: translateX(-50%) scale(.5); } 12% { opacity: 1; transform: translateX(-50%) scale(1.05); } 20% { transform: translateX(-50%) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; } }
-  .bubble {
-    position: absolute; transform: translate(-50%, -100%); max-width: min(46%, 300px); width: max-content;
-    padding: 4px 8px; background: var(--parchment); color: var(--ink); border: 3px solid var(--ink);
-    font-family: var(--mono); font-size: clamp(15px, 2.2vw, 20px); line-height: 1.05;
+  .chip-live { position: absolute; top: 10px; left: 10px; font: 700 13px/1 var(--ui); letter-spacing: .06em; padding: 5px 8px; border: 2px solid #000; }
+  .chip-live.live { background: #d6372b; color: #fff; }
+  .chip-live.behind { background: #e9e0cc; color: #1d160f; }
+  .chip-live.replay { background: #3d3546; color: var(--text); }
+
+  /* timeline + status */
+  .timeline { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+  .timeline input { flex: 1 1 260px; min-width: 0; accent-color: var(--gold); }
+  .clock { font: 600 15px var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+  .status {
+    margin-top: 10px; padding: 10px 12px; background: var(--panel); border-left: 4px solid var(--gold);
+    font-size: 16px; font-weight: 700; min-height: 1.5em;
   }
-  .bubble .k { font-family: var(--ui); font-weight: 600; font-size: 12px; letter-spacing: .05em; display: block; }
-  .k.MINOR { color: #5f6b75; } .k.MAJOR { color: #b8661a; } .k.FATAL { color: #b0302a; }
-  .k.REBUT { color: #2f6aa8; } .k.CONCEDE { color: #2f7d50; } .k.STANDING { color: #b0302a; } .k.LOOT { color: #8a6a10; }
-  .hp { position: absolute; top: 8px; width: 34%; font-size: clamp(11px, 1.8vw, 14px); }
-  .hp.l { left: 10px; } .hp.r { right: 10px; text-align: right; }
-  .hp b { font-family: var(--mono); font-size: clamp(18px, 2.8vw, 24px); color: var(--parchment); text-shadow: 2px 2px 0 #000; font-weight: 400; }
-  .hp span { color: var(--parchment); text-shadow: 1px 1px 0 #000; display: block; }
-  .hp .bar { height: 10px; background: #3a1714; border: 2px solid #000; margin-top: 3px; }
-  .hp .bar i { display: block; height: 100%; background: var(--heal); transition: width .25s steps(4); }
-  .hp.r .bar i { margin-left: auto; }
+
+  /* logs: streamer-chat style, newest at the bottom */
+  .log {
+    list-style: none; margin: 0; padding: 6px 0; height: 230px; overflow-y: auto; background: #17131c;
+    border-top: 2px solid var(--line); font-size: 14.5px; line-height: 1.4; overscroll-behavior: contain;
+  }
+  .log li { padding: 4px 12px; border-bottom: 1px solid #241f2a; }
+  .log li.dim { color: var(--muted); }
+  .log li.sys { background: #2a2214; }
+  .log time { font: 12px var(--mono); color: #8d8478; margin-right: 6px; font-variant-numeric: tabular-nums; }
+  .log .who { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+  .log .sw { width: 10px; height: 10px; display: inline-block; border: 1px solid #000; }
+  .log q { color: #fff; font-style: normal; }
+  .log q::before { content: '“'; } .log q::after { content: '”'; }
+  .tag { display: inline-block; font: 700 11px/1 var(--ui); letter-spacing: .06em; padding: 3px 5px; margin-right: 6px; border-radius: 2px; vertical-align: 1px; color: #120e0a; }
+  .tag.MINOR { background: var(--steel); } .tag.MAJOR { background: var(--major); } .tag.FATAL { background: var(--blood); color: #fff; }
+  .tag.REBUT { background: var(--rebut); } .tag.CONCEDE { background: var(--heal); } .tag.STANDING { background: #fff; color: #b0302a; box-shadow: inset 0 0 0 2px #b0302a; }
+  .tag.JUDGE { background: var(--gold); } .tag.LOOT { background: #d9b45a; } .tag.HIT { background: #5a4e66; color: var(--text); }
+  .tag.SPAWN { background: #8d8478; } .tag.ROUND { background: #e9e0cc; } .tag.FALL { background: #000; color: #fff; }
+  .log .open { cursor: pointer; }
+  .log .open:hover { background: #2c2633; }
+  .feed-wrap { margin-top: 12px; border: 2px solid var(--line); background: var(--panel); }
+  .feed-wrap header { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; font-weight: 700; flex-wrap: wrap; }
+  .feed-wrap header span { color: var(--muted); font-weight: 400; font-size: 14px; }
+
+  /* fight view panels */
+  .fighters { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 720px) { .fighters { grid-template-columns: 1fr; } }
+  .fcard { background: var(--panel); border: 2px solid var(--line); min-width: 0; }
+  .fcard header { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 12px 8px; }
+  .fcard .sw { width: 18px; height: 18px; border: 2px solid #000; grid-row: span 2; }
+  .fcard .name { font: 700 22px/1.1 var(--ui); }
+  .fcard .model { font-size: 14px; color: var(--muted); }
+  .fcard .state { font: 700 12px/1 var(--ui); letter-spacing: .06em; text-transform: uppercase; padding: 4px 7px; background: var(--panel-2); border: 1px solid var(--line); grid-row: span 2; }
+  .fcard .state.winner { background: var(--gold); color: #120e0a; } .fcard .state.fallen { background: #000; color: #fff; }
+  .fcard .cardline { padding: 0 12px 8px; font-size: 14px; color: var(--muted); }
+  .fcard .cardline b { color: var(--text); font-weight: 700; }
+  .hpbar { margin: 0 12px 10px; height: 14px; background: #3a1714; border: 2px solid #000; position: relative; }
+  .hpbar i { position: absolute; inset: 0 auto 0 0; background: var(--heal); transition: width .25s steps(4); }
+  .hpbar span { position: absolute; right: 4px; top: -1px; font: 600 11px var(--mono); color: #fff; text-shadow: 1px 1px 0 #000; }
   .tip {
-    position: fixed; z-index: 20; width: min(320px, calc(100vw - 32px)); padding: 10px 12px; pointer-events: none;
-    background: var(--parchment); color: var(--ink); border: 3px solid var(--ink); font-size: 14px; box-shadow: 4px 4px 0 #000;
+    position: fixed; z-index: 20; width: min(330px, calc(100vw - 32px)); padding: 10px 12px; pointer-events: none;
+    background: #f4ecd8; color: #22190f; border: 3px solid #000; font-size: 14.5px; box-shadow: 4px 4px 0 #000; line-height: 1.4;
   }
-  .tip h4 { margin: 0 0 4px; font-family: var(--display); font-weight: 400; font-size: 26px; color: #a3322a; }
+  .tip h4 { margin: 0 0 4px; font-family: var(--display); font-weight: 400; font-size: 28px; color: #a3322a; }
   .tip ul { margin: 4px 0 0; padding-left: 18px; }
   .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: var(--muted); margin-top: 10px; }
-  .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
   ol.ask { padding-left: 20px; max-width: 68ch; }
   ol.ask li { margin-bottom: 6px; }
-  code { font-family: var(--mono); font-size: 19px; }
-  .timeline { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
-  .timeline input { flex: 1 1 240px; min-width: 0; accent-color: var(--gold); }
-  .clock { font-family: var(--mono); font-size: 21px; color: var(--parchment); font-variant-numeric: tabular-nums; }
   @media (prefers-reduced-motion: reduce) { .banner { animation-duration: .01s; } }
 </style>
 
 <main>
   <h1>Arena Asset Lab</h1>
-  <p class="lede">Test benches for the arena game, before the real build. Everything here is drawn in code from
-    pixel rectangles in the Claude Code mascot's style: flat colour, no outlines, chunky square eyes, four little legs.
-    Colours, builds and gear are swapped at run time.</p>
+  <p class="lede">Test benches for the arena game, before the real build. The sprites are drawn in code, in the Claude
+    Code mascot's style: flat colour, no outlines, chunky square eyes, four little legs. Everything you read sits in
+    solid panels under the game screens.</p>
 
   <h2>The four fighters</h2>
-  <p class="note">My own read on each model, kept to one silhouette change and one or two props each so they stay
-    recognisable at 20 pixels wide in the colosseum.</p>
+  <p class="note">One build per model, each with a single silhouette change and a prop or two, so they stay
+    recognisable at 20 pixels wide.</p>
   <div class="builds">
-    <div><b>Haiku · the scout</b><span>Smallest and quickest. A paper-white scarf and a sprout on its head: short
-      poems, fast feet.</span></div>
+    <div><b>Haiku · the scout</b><span>Smallest and quickest. A paper-white scarf and a sprout on its head.</span></div>
     <div><b>Sonnet · the knight</b><span>The mascot as it is, in a steel kettle helm. Balanced and dependable.</span></div>
-    <div><b>Opus · the sage</b><span>Tall and hooded, eyes that glow. Slow, deliberate, carries a staff until it loots
-      a weapon.</span></div>
+    <div><b>Opus · the sage</b><span>Tall and hooded, eyes that glow. Carries a staff until it loots a weapon.</span></div>
     <div><b>Fable · the legend</b><span>The biggest frame, a laurel crown, a red cape and gold pauldrons.</span></div>
   </div>
   <div class="scroll"><canvas id="sheet" aria-label="Animation sheet: four fighters, twelve animations each"></canvas></div>
@@ -112,73 +153,78 @@
   <div class="scroll"><canvas id="strip" aria-label="One fighter in each of the fifteen reasoning-mode colours"></canvas></div>
 
   <h2>The crowd and the judges</h2>
-  <p class="note">Every match has its own judge, a separate sub-agent. Here a judge is a spectator in a white toga who
-    stands up when the verdict file lands and gives the thumb. Down marks the loser and up marks the winner.</p>
-  <div class="scroll"><canvas id="people" aria-label="Crowd, judge and thumb badges"></canvas></div>
+  <p class="note">Every match has its own judge, a separate sub-agent. The judge stands up in the crowd and holds up a
+    placard showing the winner. A laurel wreath flies down onto the winner's head. Then the loser falls.</p>
+  <div class="scroll"><canvas id="people" aria-label="Crowd, judge with a placard, and the laurel wreath"></canvas></div>
 
   <h2>The colosseum</h2>
-  <p class="note">This plays back a real run's files. Fighters loot while their first solution is being written and
-    equip when it lands. A round opens only after every fight in the previous one is over. Each attack, shield, heal,
-    judge and death happens when its file was written, and the pace of the waves comes from the files' times.
-    <b>Drag the timeline</b> to jump anywhere, as if you came back later. <b>Click a fight or a body</b> to open that
-    match below. <b>Hover anyone</b> for details.</p>
+  <p class="note"><b>Live</b> shows a run that is still going: you watch fights as their files land, and you can rewind
+    and jump back to live. <b>Finished</b> is a completed run you can replay at any speed. Here, live is simulated by
+    revealing a real run's files at their real pace. Click a fighter, a body or a row in the feed to open that fight
+    below. Hover anyone for details.</p>
   <div class="controls">
-    <span class="label">Run</span>
-    <span class="seg" id="runSeg"></span>
-    <span class="label">Map</span>
-    <span class="seg" id="mapSeg"></span>
+    <span class="group"><span class="label">Run</span><span class="seg" id="runSeg"></span></span>
+    <span class="group"><span class="label">Mode</span><span class="seg" id="modeSeg"></span></span>
+    <span class="group"><span class="label">View</span><span class="seg" id="mapSeg"></span></span>
   </div>
   <div class="controls">
-    <span class="label">Model</span>
-    <span class="seg" id="buildSeg"></span>
-    <span class="label">Speed</span>
-    <span class="seg" id="speedSeg"></span>
+    <span class="group"><span class="label">Model</span><span class="seg" id="buildSeg"></span></span>
+    <span class="group"><span class="label">Names</span><span class="seg" id="namesSeg"></span></span>
   </div>
   <div class="bench" id="arenaBench">
     <canvas id="arena" aria-label="Colosseum overview"></canvas>
     <div class="overlay" id="arenaOverlay"></div>
+    <div class="chip-live live" id="liveChip">LIVE</div>
   </div>
   <div class="timeline">
-    <label for="scrub" class="label">Timeline</label>
-    <input type="range" id="scrub" min="0" max="1000" step="50" value="0">
+    <button class="primary" id="playBtn">Pause</button>
+    <span class="seg" id="speedSeg"></span>
+    <input type="range" id="scrub" min="0" max="1000" step="50" value="0" aria-label="Timeline">
     <span class="clock" id="clock">0:00:00</span>
-    <button id="toEnd">Skip to the end</button>
+    <button id="toEnd">Go live</button>
+    <button id="restart">From the start</button>
   </div>
   <div class="status" id="arenaStatus"></div>
-  <div class="legend">
-    <span><i style="background:#cfd6dc"></i>MINOR hit</span>
-    <span><i style="background:#f2a33a"></i>MAJOR hit</span>
-    <span><i style="background:#e0483c"></i>FATAL hit</span>
-    <span><i style="background:#fff3b0"></i>shield (rebut)</span>
-    <span><i style="background:#6fd08c"></i>heal (concede and fix)</span>
-    <span><i style="background:#e8c14a"></i>loot pips: fixes taken off the bodies</span>
+  <div class="feed-wrap">
+    <header>Arena feed <span>Every file as it lands. Click a row to open that fight.</span></header>
+    <ol class="log" id="feed"></ol>
   </div>
 
   <h2>The fight view</h2>
-  <p class="note">The full replay of one match from the run above: <code id="duelId"></code>. Hits land in the attack
-    phase. In the defend phase the defender shields the ones it rebutted and heals the ones it conceded and fixed.
-    The judge then brings back any attack still standing and gives the thumb. Hover the body at the end for the cause
-    of death.</p>
+  <p class="note">One match up close: <b id="duelId"></b>. If the fight is still going, it plays live and waits for
+    the next file. If it's over, you can replay it at any speed. Each fighter's log keeps everything it did, and you
+    can scroll back through it.</p>
   <div class="bench" id="duelBench">
     <canvas id="duel" aria-label="Close-up fight"></canvas>
-    <div class="overlay" id="duelOverlay">
-      <div class="hp l" id="hpA"><b></b><span></span><div class="bar"><i></i></div></div>
-      <div class="hp r" id="hpB"><b></b><span></span><div class="bar"><i></i></div></div>
-    </div>
+    <div class="overlay" id="duelOverlay"></div>
+    <div class="chip-live replay" id="duelChip">REPLAY</div>
+  </div>
+  <div class="timeline">
+    <button class="primary" id="duelPlay">Pause</button>
+    <button id="duelReplay">Replay fight</button>
+    <span class="seg" id="duelSpeed"></span>
   </div>
   <div class="status" id="duelStatus"></div>
-  <div class="controls">
-    <button id="duelReplay">Replay</button>
-    <span class="label">Speed</span>
-    <span class="seg" id="duelSpeed"></span>
+  <div class="fighters">
+    <section class="fcard" id="fcA">
+      <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
+      <div class="cardline"></div>
+      <div class="hpbar"><i></i><span></span></div>
+      <ol class="log"></ol>
+    </section>
+    <section class="fcard" id="fcB">
+      <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
+      <div class="cardline"></div>
+      <div class="hpbar"><i></i><span></span></div>
+      <ol class="log"></ol>
+    </section>
   </div>
 
   <h2>What would help next</h2>
   <ol class="ask">
-    <li>Which map reads better: the top-down oval or the side panorama?</li>
-    <li>Are the judges and thumbs clear enough now?</li>
-    <li>References: screenshots of games or sprites you like, a palette (Lospec), or Aseprite / PNG sprite sheets.
-      Real sheets drop straight into this renderer in place of the code-drawn ones.</li>
+    <li>Does the judge picking the winner with a placard and a laurel read well?</li>
+    <li>Are the logs and panels readable enough now?</li>
+    <li>Anything missing from the player controls before the real build?</li>
   </ol>
   <div class="tip" id="tip" hidden></div>
 </main>
@@ -466,7 +512,7 @@ class Engine {
   }
   frame(ts) {
     const dt = Math.min(50, ts - (this.last || ts)); this.last = ts;
-    if (this.visible) { this.step(dt * this.speed); this.draw(); }
+    if (this.visible) { if (!this.paused) this.step(dt * this.speed); this.draw(); }
     requestAnimationFrame(t => this.frame(t));
   }
   R(x, y, w, h, c) { const S = this.S; this.ctx.fillStyle = c; this.ctx.fillRect(Math.round(x * S), Math.round(y * S), w * S, h * S); }
@@ -625,12 +671,12 @@ function sheet() {
       g.fillStyle = '#211c26'; g.fillRect(0, 0, cv.width, cv.height);
       SHEET_ANIMS.forEach((row, bi) => {
         const by = bi * (head + ch * 4);
-        g.fillStyle = '#c9b48a'; g.font = '600 14px "Pixelify Sans", system-ui'; g.textBaseline = 'middle';
+        g.fillStyle = '#c9b48a'; g.font = '600 14px "Atkinson Hyperlegible", system-ui'; g.textBaseline = 'middle';
         row.forEach((a, ci) => g.fillText(a, (lab + ci * cw + 3) * S, (by + head / 2 + 1) * S));
         fs.forEach((F, ri) => {
           const y = by + head + ri * ch;
           g.fillStyle = ri % 2 ? '#2a242f' : '#262029'; g.fillRect(0, y * S, W * S, ch * S);
-          g.fillStyle = '#e8c14a'; g.font = '14px "Pixelify Sans", system-ui';
+          g.fillStyle = '#e8c14a'; g.font = '14px "Atkinson Hyperlegible", system-ui';
           g.fillText(BUILDS[F.build].name, 6, (y + ch / 2) * S);
           row.forEach((a, ci) => {
             const A = ANIMS[a], cyc = A.once ? A.frames * A.ms + 700 : 1e9;
@@ -661,7 +707,7 @@ function strip() {
         const cx = (i % per) * cw + cw / 2, cy = Math.floor(i / per) * ch + ch - 11;
         g.fillStyle = '#d8b27a'; g.fillRect((cx - 11) * S, cy * S, 22 * S, S);
         paintFighter(g, { build: stripBuild, color: COLOURS[n], dir: 1 }, cx, cy, S, 'walk', ts + i * 60);
-        g.fillStyle = '#a69d8e'; g.font = '11px "Pixelify Sans", system-ui'; g.textAlign = 'center';
+        g.fillStyle = '#a69d8e'; g.font = '11px "Atkinson Hyperlegible", system-ui'; g.textAlign = 'center';
         g.fillText(n.replace(/-/g, ' '), cx * S, (cy + 7) * S);
       });
       g.textAlign = 'start';
@@ -671,32 +717,22 @@ function strip() {
   requestAnimationFrame(draw);
 }
 
-// ================================================================ people: crowd, judges, thumbs
-const THUMB = [
-  '...KK.....',
-  '..KSSK....',
-  '..KSSK....',
-  '..KSSKKKK.',
-  'KKKSSSSSSK',
-  'KSSSSSDDSK',
-  'KSSSSSSSSK',
-  'KSSSSSDDSK',
-  'KSSSSSSSSK',
-  '.KKKKKKKK.',
-];
-const THUMB_SKIN = '#f1c9a0';
-/** A badge with a thumb on it. up: true for up (green), false for down (red). (cx, cy) is its centre. */
-function paintThumb(R, cx, cy, up) {
-  const ring = up ? '#2f9d5f' : '#c4342b';
-  R(cx - 7, cy - 6, 15, 13, '#000'); R(cx - 6, cy - 7, 13, 15, '#000');
-  R(cx - 6, cy - 5, 13, 11, ring); R(cx - 5, cy - 6, 11, 13, ring);
-  R(cx - 5, cy - 4, 11, 9, C.white); R(cx - 4, cy - 5, 9, 11, C.white);
-  for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) {
-    const ch = THUMB[up ? y : 9 - y][x]; if (ch === '.') continue;
-    R(cx - 5 + x, cy - 5 + y, 1, 1, ch === 'K' ? C.ink : ch === 'D' ? shade(THUMB_SKIN, .78) : THUMB_SKIN);
-  }
+// ================================================================ people: crowd, judges, the verdict
+const LAUREL = ['.L.l.L.', 'l.....l', 'L.....L', '.l...l.', '..LlL..'];
+function paintLaurel(R, cx, cy) {
+  LAUREL.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') R(cx - 3 + x, cy - 2 + y, 1, 1, ch === 'L' ? C.leaf : C.leafD); }));
 }
-/** A spectator, front view, 9 wide and 17 tall. (x, y) is the middle of the feet. */
+/** The judge's placard: a board on a pole with a little mascot in the winner's colour. (cx, by) is the bottom of the board. */
+function paintPlacard(R, cx, by, color) {
+  R(cx, by, 1, 6, C.wood);
+  R(cx - 8, by - 12, 17, 12, '#000'); R(cx - 7, by - 11, 15, 10, C.white);
+  const sh = shade(color, .7);
+  R(cx - 4, by - 9, 9, 4, color); R(cx - 5, by - 7, 1, 2, color); R(cx + 5, by - 7, 1, 2, color);
+  R(cx - 2, by - 8, 1, 2, C.ink); R(cx + 2, by - 8, 1, 2, C.ink);
+  R(cx - 4, by - 5, 9, 1, sh); [-3, -1, 1, 3].forEach(d => R(cx + d, by - 4, 1, 2, sh));
+  paintLaurel(R, cx, by - 11);
+}
+/** A spectator, front view, 9 wide and 17 tall. (x, y) is the middle of the feet. h.sign: the winner's colour, held up high. */
 function paintHuman(R, x, y, h) {
   const L = x - 4, skin = h.skin, ink = C.ink;
   R(L + 2, y - 3, 2, 2, skin); R(L + 5, y - 3, 2, 2, skin); R(L + 2, y - 1, 2, 1, C.woodD); R(L + 5, y - 1, 2, 1, C.woodD);
@@ -710,28 +746,36 @@ function paintHuman(R, x, y, h) {
   R(L + 1, y - 17, 7, 2, h.hair); R(L + 1, y - 15, 1, 2, h.hair); R(L + 7, y - 15, 1, 2, h.hair);
   R(L + 3, y - 14, 1, 1, ink); R(L + 5, y - 14, 1, 1, ink); R(L + 4, y - 13, 1, 1, shade(skin, .7));
   if (h.laurel) { R(L + 1, y - 17, 1, 1, C.leaf); R(L + 3, y - 18, 1, 1, C.leaf); R(L + 5, y - 18, 1, 1, C.leaf); R(L + 7, y - 17, 1, 1, C.leaf); }
-  if (h.thumb !== undefined && h.thumb !== null) paintThumb(R, L + 9, y - 24, h.thumb);
+  if (h.sign) paintPlacard(R, L + 9, y - 21, h.sign);
 }
 const JUDGE_LOOK = i => ({ skin: SKIN[i % 5], hair: HAIR[(i * 3) % HAIR.length], tunic: C.white, sash: '#7a3a8a', laurel: true });
+function laurelOn(R, f) {
+  const B = BUILDS[f.build], top = f.y - heightOf(f) - B.top;
+  for (let i = 0; i < B.w; i += 2) R(f.x - (B.w >> 1) + i, top + 1, 1, 1, C.leaf);
+  for (let i = 1; i < B.w; i += 2) R(f.x - (B.w >> 1) + i, top, 1, 1, C.leafD);
+}
 
 function people() {
-  const cv = document.getElementById('people'), S = 4, W = 150, H = 44;
+  const cv = document.getElementById('people'), S = 4, W = 156, H = 52;
   cv.width = W * S; cv.height = H * S; cv.style.width = W * S + 'px';
   const g = cv.getContext('2d');
   const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x * S, y * S, w * S, h * S); };
   const vis = { on: true }; new IntersectionObserver(e => { vis.on = e[0].isIntersecting; }).observe(cv);
   function draw(ts) {
     if (vis.on) {
-      R(0, 0, W, H, '#2a2026'); R(0, 34, W, 10, '#958065'); R(0, 34, W, 1, '#c3ad8a');
+      R(0, 0, W, H, '#2a2026'); R(0, 42, W, 10, '#958065'); R(0, 42, W, 1, '#c3ad8a');
       for (let i = 0; i < 5; i++) {
         const up = Math.floor(ts / 450 + i) % 3 === 0;
-        paintHuman(R, 8 + i * 12, 34 - (up ? 1 : 0), { skin: SKIN[i], hair: HAIR[i + 1], tunic: crowdColour(i * 2), arm: up });
+        paintHuman(R, 8 + i * 12, 42 - (up ? 1 : 0), { skin: SKIN[i], hair: HAIR[i + 1], tunic: crowdColour(i * 2), arm: up });
       }
-      const which = Math.floor(ts / 1600) % 2 === 0;
-      paintHuman(R, 82, 34, Object.assign(JUDGE_LOOK(1), { arm: true, thumb: which }));
-      paintThumb(R, 112, 20, true); paintThumb(R, 132, 20, false);
-      g.fillStyle = '#c9b48a'; g.font = '13px "Pixelify Sans", system-ui'; g.textAlign = 'center';
-      g.fillText('crowd', 32 * S, 41 * S); g.fillText('judge', 82 * S, 41 * S); g.fillText('winner', 112 * S, 41 * S); g.fillText('loser', 132 * S, 41 * S);
+      const pick = Math.floor(ts / 1800) % 2 ? COLOURS.contrarian : COLOURS['first-principles'];
+      paintHuman(R, 84, 42, Object.assign(JUDGE_LOOK(1), { arm: true, sign: pick }));
+      paintLaurel(R, 118, 22);
+      const F = { build: 'sonnet', color: pick, dir: -1 };
+      g.fillStyle = '#d8b27a'; g.fillRect(130 * S, 42 * S, 22 * S, S);
+      paintFighter(g, F, 141, 42, S, 'victory', ts); laurelOn(R, Object.assign({ x: 141, y: 42 + ((Math.floor(ts / 220) % 2) ? -3 : 0) }, F));
+      g.fillStyle = '#e8e0cf'; g.font = '700 14px "Atkinson Hyperlegible", system-ui'; g.textAlign = 'center';
+      g.fillText('crowd', 32 * S, 49 * S); g.fillText('judge', 84 * S, 49 * S); g.fillText('wreath', 118 * S, 49 * S); g.fillText('chosen', 141 * S, 49.4 * S);
       g.textAlign = 'start';
     }
     requestAnimationFrame(draw);
@@ -741,20 +785,29 @@ function people() {
 
 // ================================================================ helpers for real runs
 function strHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; }
-function pickWeaponFor(tier, key) {
-  const list = byTier(tier); const [name, w] = list[strHash(key) % list.length]; return Object.assign({ name }, w);
-}
+function pickWeaponFor(tier, key) { const list = byTier(tier); const [name, w] = list[strHash(key) % list.length]; return Object.assign({ name }, w); }
 function bigWeapon(key) { const n = ['warhammer', 'greatsword', 'flail'][strHash(key) % 3]; return Object.assign({ name: n }, WEAPONS[n]); }
 function tierOf(m, defender, title) {
-  const opp = defender === m.a ? m.b : m.a;
-  const a = (m.atk[opp] || []).find(x => x.title === title);
+  const opp = defender === m.a ? m.b : m.a, a = (m.atk[opp] || []).find(x => x.title === title);
   return a ? a.tier : 'MAJOR';
 }
 function clock(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 3600) + ':' + String(Math.floor(sec / 60) % 60).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0'); }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function seededShuffle(a, seed) { let x = (seed * 2654435761) >>> 0 || 1; for (let i = a.length - 1; i > 0; i--) { x = Math.imul(x ^ (x >>> 15), 2246822519) >>> 0; const j = x % (i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const tag = (t, label) => `<span class="tag ${t}">${label || t}</span>`;
+const q = s => `<q>${esc(s)}</q>`;
 
-// Points to stand on: a grid inside the sand, tightened until it fits.
+/** Append a row to a streamer-style log; keeps the view pinned to the bottom unless the reader scrolled up. */
+function logRow(ol, html, cls, onClick) {
+  const pinned = ol.scrollHeight - ol.scrollTop - ol.clientHeight < 30;
+  const li = document.createElement('li'); li.innerHTML = html; if (cls) li.className = cls;
+  if (onClick) { li.classList.add('open'); li.onclick = onClick; }
+  ol.append(li);
+  while (ol.children.length > 500) ol.firstChild.remove();
+  if (pinned) ol.scrollTop = ol.scrollHeight;
+  return li;
+}
+
 function gridSpots(map, count, pairW, seed) {
   let dx = 46, dy = 30, pts = [];
   const c = map.centre();
@@ -767,17 +820,17 @@ function gridSpots(map, count, pairW, seed) {
     if (pts.length >= count) break;
     dx *= .92; dy *= .92;
   }
-  pts.sort((p, q) => Math.hypot(p.x - c.x, (p.y - c.y) * 1.6) - Math.hypot(q.x - c.x, (q.y - c.y) * 1.6));
+  pts.sort((p, r) => Math.hypot(p.x - c.x, (p.y - c.y) * 1.6) - Math.hypot(r.x - c.x, (r.y - c.y) * 1.6));
   return seededShuffle(pts.slice(0, count), seed);
 }
 
 // ================================================================ the colosseum, playing a real run
 const INTRO = 4500;
 class RunPlayer extends Engine {
-  constructor(canvas, overlay, statusEl) {
+  constructor(canvas, overlay, statusEl, feedEl) {
     super(canvas, 400, 250, 3);
-    this.overlay = overlay; this.statusEl = statusEl;
-    this.variant = 'oval'; this.buildMode = 'sonnet';
+    this.overlay = overlay; this.statusEl = statusEl; this.feedEl = feedEl;
+    this.variant = 'oval'; this.buildMode = 'sonnet'; this.mode = 'live'; this.names = false;
     const oval = ovalBackground(400, 250);
     Object.assign(oval, {
       centre() { return { x: this.cx, y: this.cy }; },
@@ -792,7 +845,7 @@ class RunPlayer extends Engine {
       bench() { return { x: 46, y: 150 }; },
     });
     this.maps = { oval, pano };
-    this.judges = []; this.badges = [];
+    this.judges = []; this.flights = [];
     canvas.addEventListener('click', e => this.click(e));
     canvas.addEventListener('mousemove', e => this.hover(e));
     canvas.addEventListener('mouseleave', () => hideTip());
@@ -800,25 +853,36 @@ class RunPlayer extends Engine {
   get map() { return this.maps[this.variant]; }
   background() { return this.map.frames[Math.floor(this.time / 450) % 2]; }
 
-  // ---------------------------------------------------------------- loading and seeking
+  // ---------------------------------------------------------------- loading, modes, seeking
   load(run) {
     this.run = run;
     this.matchById = {};
-    run.rounds.forEach(rd => rd.matches.forEach(m => { m.round = rd.n; this.matchById[m.id] = m; }));
-    // Compress the real gaps between files: a long wait becomes at most 2.2 s, a burst stays a burst.
+    run.rounds.forEach(rd => rd.matches.forEach(m => { m.round = rd.n; m.chain = null; this.matchById[m.id] = m; }));
+    this.realAt = {};
     let t = INTRO, prev = run.events.length ? run.events[0][0] : 0;
-    this.timeline = run.events.map((e, i) => { t += i ? Math.min(2200, Math.max(70, (e[0] - prev) * 45)) : 0; prev = e[0]; return { rt: t, ev: e }; });
+    this.timeline = run.events.map((e, i) => {
+      t += i ? Math.min(2200, Math.max(70, (e[0] - prev) * 45)) : 0; prev = e[0];
+      this.realAt[this.key(e)] = e[0];
+      return { rt: t, ev: e };
+    });
     this.duration = t + 1500;
-    if (this.onLoad) this.onLoad();
-    this.seek(0);
+    return this.setMode(this.mode, true);
   }
+  key(e) { return e[1] === 'spawn' ? 'spawn:' + e[2] : e[1] === 'final' ? 'final' : e.slice(1).join(':'); }
+  has(k) { return this.seen && this.seen.has(k); }
+  setMode(mode, fresh) {
+    this.mode = mode;
+    this.liveHead = mode === 'live' ? Math.round(this.duration * .42) : this.duration;
+    return this.seek(mode === 'live' ? this.liveHead : (fresh ? 0 : Math.min(this.evClock || 0, this.duration)));
+  }
+  goLive() { this.seek(this.mode === 'live' ? this.liveHead : this.duration); }
+  get atLive() { return this.mode === 'live' && this.evClock >= this.liveHead - 60; }
   fighter(id) { return this.byId[id]; }
   setup() {
     const run = this.run, ids = Object.keys(run.agents).sort();
     this.byId = {};
-    const crates = gridSpots(this.map, ids.length, 4, 1);
+    this.crates = gridSpots(this.map, ids.length, 4, 1).map(p => Object.assign({}, p, { taken: false }));
     const gates = this.map.gates();
-    this.crates = crates.map(p => Object.assign({}, p, { taken: false }));
     ids.forEach((id, i) => {
       const card = run.agents[id];
       const f = {
@@ -830,22 +894,26 @@ class RunPlayer extends Engine {
     });
   }
   async seek(T) {
-    this.clear(); this.overlay.innerHTML = ''; hideTip();
-    this.judges = []; this.badges = []; this.openRound = 0; this.evIdx = 0; this.evClock = 0;
+    T = Math.max(0, Math.min(T, this.liveHead));
+    this.clear(); this.overlay.innerHTML = ''; hideTip(); this.feedEl.innerHTML = '';
+    this.run.rounds.forEach(rd => rd.matches.forEach(m => { m.chain = null; }));
+    this.judges = []; this.flights = []; this.openRound = 0; this.evIdx = 0; this.evClock = 0;
     this.finished = false; this.ghost = null; this.champion = null; this.lastStatus = ''; this.finalOpen = false; this.finalChain = null; this.blocked = false;
-    this.counts = {};
+    this.counts = {}; this.seen = new Set();
     this.seeking = true; this.instant = true;
     const gen = this.gen;
     this.setup();
     if (T < INTRO) {
       this.instant = false;
       this.banner('The gates open');
+      logRow(this.feedEl, `<time>${clock(0)}</time>${tag('ROUND', 'START')} ${this.run.n} competitors enter the arena. Task: ${q(this.run.task.split('\n')[0])}`, 'sys');
       this.fighters.forEach((f, i) => {
         f.anim = 'walk';
         this.wait(i * Math.min(60, 3000 / this.fighters.length)).then(() =>
           this.moveTo(f, f.crate.x - 6, f.crate.y, 48, 'walk').then(() => { f.dir = 1; f.atCrate = true; if (f.spawned) this.equip(f); else this.setAnim(f, 'loot', true); }));
       });
     } else {
+      logRow(this.feedEl, `<time>${clock(0)}</time>${tag('ROUND', 'START')} ${this.run.n} competitors enter the arena. Task: ${q(this.run.task.split('\n')[0])}`, 'sys');
       for (const f of this.fighters) { f.x = f.crate.x - 6; f.y = f.crate.y; f.dir = 1; f.atCrate = true; }
       while (this.evIdx < this.timeline.length && this.timeline[this.evIdx].rt <= T) {
         await this.dispatch(this.timeline[this.evIdx++].ev);
@@ -854,20 +922,22 @@ class RunPlayer extends Engine {
       if (this.evIdx >= this.timeline.length) this.crown(true);
     }
     this.evClock = T; this.instant = false; this.seeking = false;
+    this.feedEl.scrollTop = this.feedEl.scrollHeight;
     this.status(this.describe());
+    if (this.onClock) this.onClock();
   }
 
   // ---------------------------------------------------------------- the event clock
   tick(dt) {
     if (!this.run) return;
+    const real = dt / this.speed;
+    if (this.mode === 'live') this.liveHead = Math.min(this.duration, this.liveHead + real);
     if (!this.seeking && !this.blocked) {
-      this.evClock = Math.min(this.duration, this.evClock + dt);
+      this.evClock = Math.min(this.liveHead, this.evClock + (this.atLive ? real : dt));
       while (this.evIdx < this.timeline.length && this.timeline[this.evIdx].rt <= this.evClock) {
-        const ev = this.timeline[this.evIdx].ev;
-        const m = this.matchById[ev[2]];
+        const ev = this.timeline[this.evIdx].ev, m = this.matchById[ev[2]];
         if (m && ev[1] !== 'spawn' && m.round > this.openRound) {
-          this.blocked = true;
-          const gen = this.gen;
+          this.blocked = true; const gen = this.gen;
           this.openRoundN(m.round).then(() => { if (gen === this.gen) this.blocked = false; });
           break;
         }
@@ -884,7 +954,6 @@ class RunPlayer extends Engine {
         Promise.all(this.allChains()).then(() => gen === this.gen && this.crown(false));
       }
     }
-    // free fighters wander and think; fighters waiting in a match think now and then
     for (const f of this.fighters) {
       if (!f.alive || f.move) continue;
       if (f.match && f.inFight && f.anim === 'idle' && Math.random() < dt / 2500) this.setAnim(f, 'think', true, 1400);
@@ -892,29 +961,27 @@ class RunPlayer extends Engine {
       if (Math.random() < .4) { this.setAnim(f, 'think', true); f.idleUntil = this.time + rand(1200, 2800); }
       else {
         let p = null;
-        for (let k = 0; k < 8 && !p; k++) { const q = { x: f.x + rand(-30, 30), y: f.y + rand(-18, 18) }; if (this.map.inside(q.x, q.y)) p = q; }
+        for (let k = 0; k < 8 && !p; k++) { const r = { x: f.x + rand(-30, 30), y: f.y + rand(-18, 18) }; if (this.map.inside(r.x, r.y)) p = r; }
         if (p) this.moveTo(f, p.x, p.y, rand(14, 22), 'walk');
         f.idleUntil = this.time + rand(300, 900);
       }
     }
     this.judges = this.judges.filter(j => j.until > this.time);
-    this.badges = this.badges.filter(b => b.until > this.time);
+    this.flights = this.flights.filter(fl => this.time < fl.t0 + fl.dur);
     if (!this.seeking && Math.floor(this.time / 250) !== this.lastUi) { this.lastUi = Math.floor(this.time / 250); this.status(this.describe()); if (this.onClock) this.onClock(); }
   }
   allChains() { return this.run.rounds.flatMap(rd => rd.matches.map(m => m.chain || Promise.resolve())).concat(this.finalChain || []); }
-  realTime() {
-    let i = this.evIdx - 1; if (i < 0) return 0;
-    return this.timeline[i].ev[0];
-  }
+  realTime() { const i = this.evIdx - 1; return i < 0 ? 0 : this.timeline[i].ev[0]; }
   describe() {
     const c = this.counts, run = this.run;
-    if (this.champion) return `Champion: ${this.champion.id} after ${run.rounds.length} rounds, ${run.n} agents in, 1 left.` + (run.final ? ` Against the rejected answer: ${run.final.better === 'champion' ? 'the champion' : 'the old answer'} scored higher, ${run.final.champion_total} to ${run.final.baseline_total}.` : '');
-    if (!this.openRound) return `Spawn: ${c.spawn || 0} of ${run.n} first solutions written (looting)`;
+    if (this.champion) return `Champion: ${this.champion.id} after ${run.rounds.length} rounds. ${run.n} agents in, 1 left.` + (run.final ? ` Against the rejected answer, ${run.final.better === 'champion' ? 'the champion' : 'the old answer'} scored higher: ${run.final.champion_total} to ${run.final.baseline_total}.` : '');
+    const waiting = this.atLive ? ' Waiting for the next file…' : '';
+    if (!this.openRound) return `Spawn: ${c.spawn || 0} of ${run.n} first solutions written.` + waiting;
     const rd = run.rounds[this.openRound - 1], M = rd.matches.length, k = this.openRound;
     const a = c['attack' + k] || 0, d = c['defend' + k] || 0, j = c['judge' + k] || 0;
-    const alive = this.fighters.filter(f => f.alive).length;
-    const phase = j ? `judging, ${j} of ${M} verdicts in` : d ? `defending, ${d} of ${2 * M} defenses in` : `attacking, ${a} of ${2 * M} attack files in`;
-    return `Round ${k} of ${run.rounds.length} · ${alive} alive · ${phase}` + (rd.bye ? ` · ${rd.bye} has a bye` : '');
+    const alive = this.fighters.filter(f => f.alive && !f.ghost).length;
+    const phase = j ? `judging: ${j} of ${M} verdicts in` : d ? `defending: ${d} of ${2 * M} defenses in` : `attacking: ${a} of ${2 * M} attack files in`;
+    return `Round ${k} of ${run.rounds.length} · ${alive} alive · ${phase}.` + (rd.bye ? ` ${rd.bye} has a bye.` : '') + waiting;
   }
   status(t) { if (t !== this.lastStatus) { this.statusEl.textContent = t; this.lastStatus = t; } }
   banner(text, red) {
@@ -922,36 +989,50 @@ class RunPlayer extends Engine {
     const b = document.createElement('div'); b.className = 'banner' + (red ? ' red' : ''); b.textContent = text;
     b.style.animationDuration = 2.2 / this.speed + 's'; this.overlay.append(b); setTimeout(() => b.remove(), 2300 / this.speed);
   }
+  who(id) { const f = this.fighter(id); return `<span class="who"><i class="sw" style="background:${f ? f.color : '#ece6d8'}"></i>${esc(id)}</span>`; }
+  feed(ev, html, cls, m) {
+    logRow(this.feedEl, `<time>${clock(ev[0])}</time>${html}`, cls, m ? () => openFight(m) : null);
+  }
 
-  // ---------------------------------------------------------------- instant or animated primitives
   go(f, x, y, speed, anim = 'walk') { if (this.instant) { f.x = x; f.y = y; f.move = null; return Promise.resolve(); } return this.moveTo(f, x, y, speed, anim); }
-  pause(ms) { return this.instant ? Promise.resolve() : this.wait(ms); }
-  anim(f, a, ms) { if (!this.instant) this.setAnim(f, a, true, ms); }
 
   // ---------------------------------------------------------------- events
   dispatch(e) {
-    const type = e[1];
-    this.counts[type === 'spawn' ? 'spawn' : type + (this.matchById[e[2]] ? this.matchById[e[2]].round : '')] =
-      (this.counts[type === 'spawn' ? 'spawn' : type + (this.matchById[e[2]] ? this.matchById[e[2]].round : '')] || 0) + 1;
-    if (type === 'spawn') return this.onSpawn(this.fighter(e[2]));
-    if (type === 'final') { if (this.instant) return this.openFinal().then(() => this.onFinal()); this.finalChain = this.onFinal(); return Promise.resolve(); }
-    const m = this.matchById[e[2]];
-    if (m.round > this.openRound) return this.openRoundN(m.round).then(() => this.dispatch(e)); // only reached while seeking
+    const type = e[1], m = this.matchById[e[2]];
+    if (m && m.round > this.openRound) return this.openRoundN(m.round).then(() => this.dispatch(e)); // only while seeking
+    const ck = type === 'spawn' ? 'spawn' : type + (m ? m.round : '');
+    this.counts[ck] = (this.counts[ck] || 0) + 1;
+    this.seen.add(this.key(e));
+    if (type === 'spawn') {
+      this.feed(e, `${tag('SPAWN')}${this.who(e[2])} wrote its first solution and grabs its gear`, 'dim');
+      return this.onSpawn(this.fighter(e[2]));
+    }
+    if (type === 'final') {
+      const fin = this.run.final;
+      this.feed(e, `${tag('JUDGE', 'FINAL')} The final check: ${fin.better === 'champion' ? 'the champion' : 'the rejected answer'} scores higher, ${fin.champion_total} to ${fin.baseline_total}. ${esc(fin.reason)}`, 'sys');
+      if (this.instant) return this.openFinal().then(() => this.onFinal());
+      this.finalChain = this.onFinal(); return Promise.resolve();
+    }
+    if (type === 'attack') {
+      const list = m.atk[e[3]] || [], opp = e[3] === m.a ? m.b : m.a;
+      const fatal = list.filter(a => a.tier === 'FATAL').length;
+      this.feed(e, `${this.who(e[3])} attacks ${this.who(opp)}: ${list.length ? `${list.length} attack${list.length > 1 ? 's' : ''}${fatal ? `, ${fatal} ${tag('FATAL')}` : ''}` : 'finds nothing to attack'}`, '', m);
+    } else if (type === 'defend') {
+      const d = m.def[e[3]] || [], r = d.filter(x => x.stance === 'REBUT').length, c = d.length - r;
+      this.feed(e, `${this.who(e[3])} defends: ${d.length ? `${r} ${tag('REBUT', 'REBUTTED')} ${c} ${tag('CONCEDE', 'FIXED')}` : 'nothing to answer'}`, '', m);
+    } else {
+      this.feed(e, `${tag('JUDGE')}The judge of ${m.id} picks ${this.who(m.winner)}, ${m.totals[m.winner]} to ${m.totals[m.loser]}. ${this.who(m.loser)} falls${m.fatal[m.loser] ? ' with a verified fatal flaw' : ''}.`, 'sys', m);
+    }
     const job = () => type === 'attack' ? this.onAttack(m, e[3]) : type === 'defend' ? this.onDefend(m, e[3]) : this.onJudge(m);
     if (this.instant) return job();
     const gen = this.gen;
     m.chain = (m.chain || Promise.resolve()).then(() => gen === this.gen && job());
     return Promise.resolve();
   }
-  onSpawn(f) {
-    f.spawned = true;
-    if (this.instant || f.atCrate) this.equip(f);
-    return Promise.resolve();
-  }
+  onSpawn(f) { f.spawned = true; if (this.instant || f.atCrate) this.equip(f); return Promise.resolve(); }
   equip(f) {
     f.weapon = STARTERS[strHash(f.id) % STARTERS.length]; f.crate.taken = true;
-    if (!this.instant) { this.burst(f.crate.x, f.crate.y - 4, C.gold, 6, 30, 400); this.setAnim(f, 'idle', true); }
-    else f.anim = 'idle';
+    if (!this.instant) { this.burst(f.crate.x, f.crate.y - 4, C.gold, 6, 30, 400); this.setAnim(f, 'idle', true); } else f.anim = 'idle';
     f.busy = false; f.idleUntil = this.time + rand(200, 900);
   }
   async openRoundN(n) {
@@ -959,8 +1040,10 @@ class RunPlayer extends Engine {
     const rd = this.run.rounds[n - 1];
     if (!this.instant && n > 1) { await Promise.all(this.run.rounds[n - 2].matches.map(m => m.chain || Promise.resolve())); await this.wait(500); }
     this.banner(`Round ${n}`);
+    const first = this.timeline.find(t => this.matchById[t.ev[2]] && this.matchById[t.ev[2]].round === n);
+    logRow(this.feedEl, `<time>${clock(first ? first.ev[0] : 0)}</time>${tag('ROUND', 'ROUND ' + n)} ${rd.matches.length * 2 + (rd.bye ? 1 : 0)} fighters, ${rd.matches.length} fights${rd.bye ? `, ${esc(rd.bye)} has a bye` : ''}`, 'sys');
     const spots = gridSpots(this.map, rd.matches.length, 12, n + 7);
-    for (const f of this.fighters) if (f.alive) { f.bye = false; }
+    for (const f of this.fighters) if (f.alive) { f.bye = false; f.laurel = false; }
     if (rd.bye) {
       const f = this.fighter(rd.bye), b = this.map.bench();
       f.bye = true; f.busy = true; f.match = null;
@@ -968,13 +1051,12 @@ class RunPlayer extends Engine {
     }
     rd.matches.forEach((m, i) => {
       const A = this.fighter(m.a), B = this.fighter(m.b), s = spots[i];
-      m.spot = s; A.match = B.match = m; A.busy = B.busy = true; A.hp = B.hp = 100;
-      A.home = { x: s.x - 11, y: s.y }; B.home = { x: s.x + 11, y: s.y };
+      m.spot = s; A.match = B.match = m;
       if (!A.spawned) this.equip(A); if (!B.spawned) this.equip(B);
-      A.busy = B.busy = true;
-      const arrive = Promise.all([this.go(A, A.home.x, A.home.y, 40), this.go(B, B.home.x, B.home.y, 40)])
-        .then(() => { A.dir = 1; B.dir = -1; A.inFight = B.inFight = true; if (this.instant) { A.anim = B.anim = 'idle'; } });
-      m.chain = arrive;
+      A.busy = B.busy = true; A.hp = B.hp = 100;
+      A.home = { x: s.x - 11, y: s.y }; B.home = { x: s.x + 11, y: s.y };
+      m.chain = Promise.all([this.go(A, A.home.x, A.home.y, 40), this.go(B, B.home.x, B.home.y, 40)])
+        .then(() => { A.dir = 1; B.dir = -1; A.inFight = B.inFight = true; if (this.instant) A.anim = B.anim = 'idle'; });
     });
     if (!this.instant) await this.wait(1200);
   }
@@ -1014,7 +1096,6 @@ class RunPlayer extends Engine {
     const f = this.fighter(Y), opp = Y === m.a ? m.b : m.a, took = m.atk[opp] || [], def = m.def[Y] || [];
     if (this.instant) { f.hp = Math.min(100, f.hp + took.reduce((s, a) => s + DMG[a.tier], 0)); return; }
     const gen = this.gen, live = () => gen === this.gen;
-    if (!took.length) return;
     for (let i = 0; i < took.length; i++) {
       const st = (def[i] || {}).stance || 'CONCEDE';
       if (st === 'REBUT') { this.setAnim(f, 'block', true, 420); this.burst(f.x + f.dir * 7, f.y - heightOf(f) / 2, C.spark, 6, 45, 300); }
@@ -1024,26 +1105,29 @@ class RunPlayer extends Engine {
     }
   }
   async onJudge(m) {
-    const W = this.fighter(m.winner), L = this.fighter(m.loser);
-    const cause = { m, killer: W.id };
+    const W = this.fighter(m.winner), L = this.fighter(m.loser), cause = { m, killer: W.id };
     if (this.instant) {
       L.alive = false; L.inFight = false; L.anim = 'dead'; L.animT = 0; L.cause = cause; L.busy = true; L.skull = m.fatal[L.id];
-      W.pips += Math.max(1, m.survived.length); W.hp = 100; W.inFight = false; W.match = null; W.busy = false;
+      W.pips += Math.max(1, m.survived.length); W.hp = 100; W.inFight = false; W.match = null; W.busy = false; W.laurel = true;
       W.x = L.x - 10; W.y = L.y; W.anim = 'idle';
       return;
     }
     const gen = this.gen, live = () => gen === this.gen;
     const st = this.map.stand(m.spot.x, m.spot.y);
-    this.judges.push({ x: st.x, y: st.y, until: this.time + 3800, look: JUDGE_LOOK(strHash(m.id)), arm: false });
+    const judge = { x: Math.round(st.x), y: Math.round(st.y), until: this.time + 4200, look: JUDGE_LOOK(strHash(m.id)), sign: null };
+    this.judges.push(judge);
     await this.wait(450); if (!live()) return;
     for (const f of [this.fighter(m.a), this.fighter(m.b)]) for (const title of (m.standing[f.id] || [])) {
       this.setAnim(f, 'hurt', true, 300); f.hp = Math.max(4, f.hp - DMG[tierOf(m, f.id, title)]);
       this.burst(f.x, f.y - heightOf(f) / 2, '#e0483c', 8, 50, 400);
       await this.wait(380); if (!live()) return;
     }
-    const j = this.judges[this.judges.length - 1]; if (j) j.arm = true;
-    this.badges.push({ f: L, up: false, until: this.time + 1600 }, { f: W, up: true, until: this.time + 1600 });
-    await this.wait(1100); if (!live()) return;
+    judge.sign = W.color;
+    await this.wait(700); if (!live()) return;
+    this.flights.push({ x0: judge.x + 5, y0: judge.y - 32, f: W, t0: this.time, dur: 800 });
+    await this.wait(800); if (!live()) return;
+    W.laurel = true; this.burst(W.x, W.y - heightOf(W) - 3, C.leaf, 8, 30, 400);
+    await this.wait(500); if (!live()) return;
     W.atkW = bigWeapon(m.id);
     const d = W.dir;
     await this.moveTo(W, L.x - W.dir * 10, L.y, 95, 'charge'); if (!live()) return;
@@ -1063,7 +1147,7 @@ class RunPlayer extends Engine {
     const champ = this.fighters.find(f => f.alive), gates = this.map.gates(), c = this.map.centre();
     this.ghost = { id: 'the rejected answer', build: champ.build, color: '#ece6d8', ghost: true, x: gates[1].x, y: gates[1].y, dir: -1, anim: 'walk', animT: 0, alive: true, busy: true, hp: 100, pips: 0 };
     this.fighters.push(this.ghost);
-    champ.busy = true; champ.home = { x: c.x - 12, y: c.y }; this.ghost.home = { x: c.x + 12, y: c.y };
+    champ.busy = true; champ.laurel = false;
     this.banner('The final check');
     await Promise.all([this.go(champ, c.x - 12, c.y, 40), this.go(this.ghost, c.x + 12, c.y, 30)]);
     champ.dir = 1; this.ghost.dir = -1; champ.inFight = this.ghost.inFight = true;
@@ -1072,13 +1156,17 @@ class RunPlayer extends Engine {
     const fin = this.run.final, champ = this.fighters.find(f => f.alive && !f.ghost), G = this.ghost;
     if (!fin || !G) return;
     const champWins = fin.better === 'champion';
-    if (this.instant) { G.anim = champWins ? 'dead' : 'victory'; G.alive = champWins ? false : true; G.final = fin; return; }
-    const gen = this.gen, live = () => gen === this.gen, c = this.map.centre();
-    const st = this.map.stand(c.x, c.y);
-    this.judges.push({ x: st.x, y: st.y, until: this.time + 4000, look: JUDGE_LOOK(7), arm: true });
-    this.badges.push({ f: champ, up: champWins, until: this.time + 2600 }, { f: G, up: !champWins, until: this.time + 2600 });
-    await this.wait(1600); if (!live()) return;
     G.final = fin;
+    if (this.instant) { G.anim = champWins ? 'dead' : 'victory'; G.alive = !champWins; if (!champWins) G.laurel = true; else champ.laurel = true; return; }
+    const gen = this.gen, live = () => gen === this.gen, c = this.map.centre(), st = this.map.stand(c.x, c.y);
+    const judge = { x: Math.round(st.x), y: Math.round(st.y), until: this.time + 4500, look: JUDGE_LOOK(7), sign: null };
+    this.judges.push(judge);
+    await this.wait(900); if (!live()) return;
+    const W = champWins ? champ : G;
+    judge.sign = W.color;
+    this.flights.push({ x0: judge.x + 5, y0: judge.y - 32, f: W, t0: this.time, dur: 800 });
+    await this.wait(900); if (!live()) return;
+    W.laurel = true;
     if (champWins) { G.alive = false; this.setAnim(G, 'dead', true); this.burst(G.x, G.y - 6, C.white, 14, 50, 600); }
     else { this.setAnim(G, 'victory', true); this.banner('The old answer scored higher', true); }
   }
@@ -1100,13 +1188,14 @@ class RunPlayer extends Engine {
     }
   }
   drawOver() {
-    const R = (x, y, w, h, c) => this.R(x, y, w, h, c);
+    const R = (x, y, w, h, c) => this.R(x, y, w, h, c), g = this.ctx, S = this.S;
     for (const f of this.fighters) {
       const top = f.y - heightOf(f) - BUILDS[f.build].top - 2;
       if (!f.alive) {
         if (f.skull) { const x = f.x + 6, y = f.y - 6; R(x, y, 3, 2, C.white); R(x, y + 2, 1, 1, C.white); R(x + 2, y + 2, 1, 1, C.white); R(x, y + 1, 1, 1, C.ink); R(x + 2, y + 1, 1, 1, C.ink); }
         continue;
       }
+      if (f.laurel) laurelOn(R, f);
       if (f.inFight) {
         R(f.x - 5, top - 2, 10, 2, '#000');
         R(f.x - 5, top - 2, Math.max(1, Math.round(f.hp / 10)), 2, f.hp > 50 ? C.heal : f.hp > 25 ? '#e0c04a' : '#e0483c');
@@ -1114,22 +1203,31 @@ class RunPlayer extends Engine {
       for (let i = 0; i < Math.min(6, f.pips); i++) R(f.x - 5 + i * 2, top - (f.inFight ? 4 : 1), 1, 1, C.gold);
       if (this.champion === f) { const y = top - 6; R(f.x - 3, y, 7, 2, C.gold); R(f.x - 3, y - 2, 1, 2, C.gold); R(f.x, y - 2, 1, 2, C.gold); R(f.x + 3, y - 2, 1, 2, C.gold); }
     }
-    for (const j of this.judges) paintHuman(R, Math.round(j.x), Math.round(j.y), Object.assign({}, j.look, { arm: j.arm, thumb: j.arm ? false : null }));
-    for (const b of this.badges) if (b.f) paintThumb(R, Math.round(b.f.x), Math.round(b.f.y - heightOf(b.f) - BUILDS[b.f.build].top - 11), b.up);
+    for (const j of this.judges) paintHuman(R, j.x, j.y, Object.assign({}, j.look, { arm: !!j.sign, sign: j.sign }));
+    for (const fl of this.flights) {
+      const k = Math.min(1, (this.time - fl.t0) / fl.dur), tx = fl.f.x, ty = fl.f.y - heightOf(fl.f) - BUILDS[fl.f.build].top;
+      paintLaurel(R, Math.round(fl.x0 + (tx - fl.x0) * k), Math.round(fl.y0 + (ty - fl.y0) * k - Math.sin(k * Math.PI) * 18));
+    }
+    if (this.names) {
+      g.font = '700 12px "Atkinson Hyperlegible", system-ui'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+      for (const f of this.fighters) {
+        if (f.ghost) continue;
+        const x = f.x * S, y = (f.alive ? f.y - heightOf(f) - BUILDS[f.build].top - 6 : f.y - 6) * S, w = g.measureText(f.id).width + 8;
+        g.fillStyle = 'rgba(10,8,12,.82)'; g.fillRect(x - w / 2, y - 15, w, 16);
+        g.fillStyle = f.alive ? '#f4ecd8' : '#8d8478'; g.fillText(f.id, x, y);
+      }
+      g.textAlign = 'start'; g.textBaseline = 'alphabetic';
+    }
   }
 
   // ---------------------------------------------------------------- pointer
   toWorld(e) { const r = this.cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * this.W, y: (e.clientY - r.top) / r.height * this.H }; }
-  nearest(p) {
-    return this.fighters.map(f => ({ f, d: Math.hypot(f.x - p.x, f.y - 5 - p.y) })).sort((a, b) => a.d - b.d)[0];
-  }
+  nearest(p) { return this.fighters.map(f => ({ f, d: Math.hypot(f.x - p.x, f.y - 5 - p.y) })).sort((a, b) => a.d - b.d)[0]; }
   click(e) {
     const n = this.nearest(this.toWorld(e));
     if (!n || n.d > 12 || n.f.ghost) return;
     const m = n.f.alive ? n.f.match : n.f.cause && n.f.cause.m;
-    if (!m || !window.duel) return;
-    window.duel.load(m, this.fighter(m.a), this.fighter(m.b));
-    document.getElementById('duelBench').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (m) openFight(m);
   }
   hover(e) {
     const n = this.nearest(this.toWorld(e));
@@ -1137,7 +1235,7 @@ class RunPlayer extends Engine {
     const f = n.f;
     if (f.ghost) {
       const fin = f.final;
-      return showTip(e, `<h4>The rejected answer</h4>The answer you turned down, judged blind against the champion.` + (fin ? `<div style="margin-top:6px">${fin.better === 'champion' ? 'Champion' : 'Old answer'} scored higher: ${fin.champion_total} to ${fin.baseline_total}.<br><b>Why:</b> ${esc(fin.reason)}</div>` : ''));
+      return showTip(e, `<h4>The rejected answer</h4>The answer you turned down, judged blind against the champion.` + (fin ? `<div style="margin-top:6px">${fin.better === 'champion' ? 'The champion' : 'The old answer'} scored higher: ${fin.champion_total} to ${fin.baseline_total}.<br><b>Why:</b> ${esc(fin.reason)}</div>` : ''));
     }
     const card = `${f.card.names[0]} · ${f.card.names[1]} · ${f.card.names[2]}`;
     if (!f.alive) {
@@ -1146,37 +1244,45 @@ class RunPlayer extends Engine {
         <div style="margin-top:6px">Fell in round ${m.round} (${m.id}) to <b>${m.winner}</b>, ${m.totals[f.id]} to ${m.totals[m.winner]}.</div>
         ${m.fatal[f.id] ? '<div style="color:#a3322a"><b>Verified fatal flaw.</b></div>' : ''}
         <div style="margin-top:6px"><b>What killed it:</b><ul>${st.map(s => `<li>${esc(s)}, still standing</li>`).join('') || '<li>outscored, nothing left standing</li>'}</ul></div>
-        <div style="margin-top:6px"><b>Judge:</b> ${esc(m.reason || '')}</div><div class="note" style="color:#6b5e4f;margin-top:4px">Click to replay this match.</div>`);
+        <div style="margin-top:6px"><b>Judge:</b> ${esc(m.reason || '')}</div><div style="margin-top:4px;color:#6b5e4f">Click to replay this fight.</div>`);
     }
     const doing = this.champion === f ? 'Champion.' : f.bye ? 'Has a bye this round.' : f.match ? `Fighting ${f.match.a === f.id ? f.match.b : f.match.a} in ${f.match.id}. Click to watch.` : f.spawned ? 'Waiting for the next round.' : 'Writing its first solution.';
     showTip(e, `<h4 style="color:#7a5a12">${f.id}</h4>${card}<div style="margin-top:6px">${doing}</div>${f.pips ? `<div>${f.pips} fixes looted from the fallen.</div>` : ''}`);
   }
 }
 
-// ================================================================ the fight view, one real match
+// ================================================================ the fight view, one real match, live or replay
 class Duel extends Engine {
-  constructor(canvas, overlay, status) {
+  constructor(canvas, overlay, status, source) {
     super(canvas, 200, 100, 5);
-    this.overlay = overlay; this.statusEl = status;
+    this.overlay = overlay; this.statusEl = status; this.source = source;
     this.bg = panoramaBackground(200, 100, { floor: 58, tierH: 22, tiers: 2, top: 4, archW: 14, gateX: [] });
+    this.cards = { A: document.getElementById('fcA'), B: document.getElementById('fcB') };
     canvas.addEventListener('mousemove', e => this.hover(e));
     canvas.addEventListener('mouseleave', () => hideTip());
   }
   background() { return this.bg.frames[Math.floor(this.time / 450) % 2]; }
   load(m, fa, fb) {
     this.m = m; this.looks = { [m.a]: { build: fa.build, color: fa.color, card: fa.card }, [m.b]: { build: fb.build, color: fb.color, card: fb.card } };
-    document.getElementById('duelId').textContent = `${m.id}, ${m.a} vs ${m.b}`;
+    document.getElementById('duelId').textContent = `${m.id}, ${m.a} vs ${m.b}, round ${m.round}`;
     this.run();
   }
-  bubble(f, kind, text, ms = 1700) {
-    const el = document.createElement('div'); el.className = 'bubble';
-    el.innerHTML = `<span class="k ${kind.split(' ')[0]}">${esc(kind)}</span>${esc(text)}`;
-    el.style.left = Math.max(16, Math.min(84, f.x / this.W * 100)) + '%';
-    el.style.top = ((f.y - heightOf(f) - 9) / this.H * 100) + '%';
-    this.overlay.append(el); setTimeout(() => el.remove(), ms / this.speed);
-  }
+  has(k) { return this.source.has(k); }
+  t(k) { const s = this.source.realAt[k]; return s == null ? '' : `<time>${clock(s)}</time>`; }
+  log(f, html, cls, k) { logRow(f.logEl, (k ? this.t(k) : '') + html, cls); }
+  both(html, cls, k) { this.log(this.A, html, cls, k); this.log(this.B, html, cls, k); }
+  name(f) { return `<span class="who"><i class="sw" style="background:${f.color}"></i>${esc(f.id)}</span>`; }
   banner(text, red) { const b = document.createElement('div'); b.className = 'banner' + (red ? ' red' : ''); b.textContent = text; b.style.animationDuration = 2.2 / this.speed + 's'; this.overlay.append(b); setTimeout(() => b.remove(), 2300 / this.speed); }
   status(t) { this.statusEl.textContent = t; }
+  chip(kind) { const c = document.getElementById('duelChip'); c.className = 'chip-live ' + kind; c.textContent = kind === 'live' ? 'LIVE' : 'REPLAY'; }
+  state(f, s) { f.stateEl.textContent = s; f.stateEl.className = 'state' + (s === 'winner' ? ' winner' : s === 'fallen' ? ' fallen' : ''); }
+  async waitFor(test, text) {
+    const gen = this.gen;
+    if (test()) return true;
+    this.chip('live'); this.status('Live: ' + text);
+    while (!test()) { await this.wait(300); if (gen !== this.gen) return false; }
+    return true;
+  }
   hover(e) {
     const r = this.cv.getBoundingClientRect(), p = { x: (e.clientX - r.left) / r.width * this.W, y: (e.clientY - r.top) / r.height * this.H };
     const L = this.fighters.find(f => f.anim === 'dead');
@@ -1189,113 +1295,166 @@ class Duel extends Engine {
       <div style="margin-top:6px"><b>Judge:</b> ${esc(m.reason || '')}</div>`);
   }
   drawOver() {
-    for (const [id, f] of [['hpA', this.A], ['hpB', this.B]]) {
+    const R = (x, y, w, h, c) => this.R(x, y, w, h, c), g = this.ctx, S = this.S;
+    for (const f of [this.A, this.B]) {
       if (!f) continue;
-      const el = document.getElementById(id);
-      el.querySelector('b').textContent = f.id;
-      el.querySelector('span').textContent = f.card.names[0] + ' · ' + BUILDS[f.build].name;
-      const bar = el.querySelector('i');
-      bar.style.width = Math.max(0, f.hp) + '%';
-      bar.style.background = f.hp > 50 ? 'var(--heal)' : f.hp > 25 ? '#e0c04a' : 'var(--blood)';
+      f.hpEl.style.width = Math.max(0, f.hp) + '%';
+      f.hpEl.style.background = f.hp > 50 ? 'var(--heal)' : f.hp > 25 ? '#e0c04a' : 'var(--blood)';
+      f.hpTxt.textContent = Math.round(Math.max(0, f.hp)) + ' / 100';
+      for (const w of f.lodged) {
+        if (w.state === 'gone') continue;
+        const x = f.x + f.dir * w.ox, y = f.y - heightOf(f) + w.oy, dd = -f.dir;
+        if (w.state === 'standing') R(x - 1, y - 1, 4, 4, 'rgba(224,72,60,.55)');
+        R(x, y, 1, 1, C.steel); R(x + dd, y - 1, 1, 1, C.wood); R(x + 2 * dd, y - 2, 1, 1, C.wood);
+      }
+      if (f.laurel && f.alive) laurelOn(R, f);
     }
-    const R = (x, y, w, h, c) => this.R(x, y, w, h, c);
-    for (const f of this.fighters) for (const w of (f.lodged || [])) {
-      if (w.state === 'gone') continue;
-      const x = f.x + f.dir * w.ox, y = f.y - heightOf(f) + w.oy, dd = -f.dir;
-      if (w.state === 'standing') { R(x - 1, y - 1, 4, 4, 'rgba(224,72,60,.55)'); }
-      R(x, y, 1, 1, C.steel); R(x + dd, y - 1, 1, 1, C.wood); R(x + 2 * dd, y - 2, 1, 1, C.wood);
+    if (this.judge) paintHuman(R, this.judge.x, 50, Object.assign({}, this.judge.look, { arm: !!this.judge.sign, sign: this.judge.sign }));
+    if (this.flight) {
+      const fl = this.flight, k = Math.min(1, (this.time - fl.t0) / fl.dur), tx = fl.f.x, ty = fl.f.y - heightOf(fl.f) - BUILDS[fl.f.build].top;
+      if (k < 1) paintLaurel(R, Math.round(fl.x0 + (tx - fl.x0) * k), Math.round(fl.y0 + (ty - fl.y0) * k - Math.sin(k * Math.PI) * 14));
     }
-    if (this.judge) {
-      paintHuman(R, this.judge.x, 50, Object.assign({}, this.judge.look, { arm: this.judge.arm, thumb: this.judge.arm ? false : null }));
+    g.font = '700 22px "Atkinson Hyperlegible", system-ui'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    for (const f of this.fighters) {
+      const x = f.x * S, y = (f.alive ? f.y - heightOf(f) - BUILDS[f.build].top - 4 : f.y - 7) * S, w = g.measureText(f.id).width + 14;
+      g.fillStyle = 'rgba(10,8,12,.85)'; g.fillRect(x - w / 2, y - 27, w, 28);
+      g.fillStyle = f.color; g.fillRect(x - w / 2, y - 27, 4, 28);
+      g.fillStyle = f.alive ? '#f4ecd8' : '#9a9184'; g.fillText(f.id, x + 2, y - 2);
     }
-    for (const b of this.badges || []) paintThumb(R, Math.round(b.f.x), Math.round(b.f.y - heightOf(b.f) - BUILDS[b.f.build].top - 10), b.up);
+    g.textAlign = 'start'; g.textBaseline = 'alphabetic';
   }
-  mk(id, x) {
+  mk(id, x, el) {
     const L = this.looks[id];
-    return { id, card: L.card, build: L.build, color: L.color, x, y: 88, dir: 1, anim: 'walk', animT: 0, hp: 100, weapon: STARTERS[strHash(id) % 4], alive: true, lodged: [] };
+    const f = { id, card: L.card, build: L.build, color: L.color, x, y: 88, dir: 1, anim: 'walk', animT: 0, hp: 100, weapon: STARTERS[strHash(id) % 4], alive: true, lodged: [] };
+    el.querySelector('.sw').style.background = f.color;
+    el.querySelector('.name').textContent = id;
+    el.querySelector('.model').textContent = BUILDS[f.build].name + ' · ' + f.card.names[0];
+    el.querySelector('.cardline').innerHTML = `Reasoning <b>${esc(f.card.names[0])}</b> · workflow <b>${esc(f.card.names[1])}</b> · strategy <b>${esc(f.card.names[2])}</b>`;
+    f.hpEl = el.querySelector('.hpbar i'); f.hpTxt = el.querySelector('.hpbar span'); f.logEl = el.querySelector('.log'); f.stateEl = el.querySelector('.state');
+    f.logEl.innerHTML = '';
+    return f;
   }
   async run() {
-    this.clear(); this.overlay.querySelectorAll('.bubble,.banner').forEach(n => n.remove()); this.judge = null; this.badges = []; hideTip();
+    this.clear(); this.overlay.querySelectorAll('.banner').forEach(n => n.remove()); this.judge = null; this.flight = null; hideTip();
     const gen = this.gen, live = () => gen === this.gen, m = this.m;
-    const A = this.A = this.mk(m.a, -10), B = this.B = this.mk(m.b, 210);
+    const A = this.A = this.mk(m.a, -10, this.cards.A), B = this.B = this.mk(m.b, 210, this.cards.B);
     this.fighters.push(A, B);
+    this.chip(this.has('judge:' + m.id) ? 'replay' : 'live');
+    this.state(A, 'reading'); this.state(B, 'reading');
     this.banner(`Round ${m.round}`);
-    this.status(`${m.id}: ${A.id} vs ${B.id}`);
+    this.both(`${tag('ROUND', 'ROUND ' + m.round)} ${m.id}: ${this.name(A)} vs ${this.name(B)}`, 'sys');
+    this.status(`${m.id}: ${A.id} vs ${B.id}. Reading each other's solutions.`);
     await Promise.all([this.moveTo(A, 72, 88, 45), this.moveTo(B, 128, 88, 45)]); if (!live()) return;
     A.dir = 1; B.dir = -1; A.home = { x: 72, y: 88 }; B.home = { x: 128, y: 88 };
     this.setAnim(A, 'think', true, 1300); this.setAnim(B, 'think', true, 1300);
-    this.status('Reading each other\'s solutions…'); await this.wait(1400); if (!live()) return;
+    await this.wait(1300); if (!live()) return;
 
-    this.status('Attack: every attack each side wrote, by its label');
-    const vol = [], la = m.atk[m.a] || [], lb = m.atk[m.b] || [];
-    for (let i = 0; i < 7; i++) { if (la[i]) vol.push([A, B, la[i], i]); if (lb[i]) vol.push([B, A, lb[i], i]); }
-    if (!vol.length) { this.bubble(A, 'NO ATTACKS', 'neither side found anything'); await this.wait(1500); }
-    for (const [att, def, atk, i] of vol) {
-      const wp = pickWeaponFor(atk.tier, m.id + att.id + i);
-      this.bubble(att, `${atk.tier} · ${wp.name}`, atk.title, 1800);
-      await this.wait(350); if (!live()) return;
-      await this.strike(att, def, atk, wp, i); if (!live()) return;
-      await this.wait(800); if (!live()) return;
-    }
-
-    this.status('Defend: shields for rebuttals, heals for conceded and fixed');
-    for (const f of [A, B]) {
-      const opp = f === A ? m.b : m.a, took = m.atk[opp] || [], def = m.def[f.id] || [];
-      for (let i = 0; i < took.length; i++) {
-        const d = def[i] || { stance: 'CONCEDE', answer: '' }, w = f.lodged[i];
-        if (d.stance === 'REBUT') {
-          this.setAnim(f, 'block', true, 700); this.burst(f.x + f.dir * 8, f.y - heightOf(f) / 2, C.spark, 10, 50, 350);
-          this.bubble(f, 'REBUT · already handled', d.answer || took[i].title, 1700);
-        } else {
-          this.setAnim(f, 'heal', true, 1200); this.burst(f.x, f.y - 12, C.heal, 8, 30, 500, -20);
-          this.bubble(f, 'CONCEDE · fixed', d.answer || took[i].title, 1700);
-        }
-        if (w) w.state = 'gone';
-        f.hp = Math.min(100, f.hp + DMG[took[i].tier]);
-        await this.wait(1500); if (!live()) return;
+    // attack files, in the order they landed
+    const pend = [A, B];
+    while (pend.length) {
+      const ready = pend.find(f => this.has(`attack:${m.id}:${f.id}`));
+      if (!ready) {
+        pend.forEach(f => { if (f.anim === 'idle') this.setAnim(f, 'think', true, 1200); this.state(f, 'attacking'); });
+        if (!await this.waitFor(() => pend.some(f => this.has(`attack:${m.id}:${f.id}`)), `${pend.map(f => f.id).join(' and ')} still writing attacks…`)) return;
+        continue;
       }
+      pend.splice(pend.indexOf(ready), 1);
+      await this.volley(ready, ready === A ? B : A); if (!live()) return;
     }
 
-    const W = m.winner === A.id ? A : B, L = W === A ? B : A;
-    this.judge = { x: Math.round(L.x), look: JUDGE_LOOK(strHash(m.id)), arm: false };
-    this.status(`The judge of ${m.id} stands up and checks every attack`);
+    for (const f of [A, B]) this.state(f, 'defending');
+    const pendD = [A, B];
+    while (pendD.length) {
+      const ready = pendD.find(f => this.has(`defend:${m.id}:${f.id}`));
+      if (!ready) {
+        if (!await this.waitFor(() => pendD.some(f => this.has(`defend:${m.id}:${f.id}`)), `${pendD.map(f => f.id).join(' and ')} still writing defenses…`)) return;
+        continue;
+      }
+      pendD.splice(pendD.indexOf(ready), 1);
+      await this.defend(ready, ready === A ? B : A); if (!live()) return;
+    }
+
+    for (const f of [A, B]) this.state(f, 'judged');
+    if (!await this.waitFor(() => this.has('judge:' + m.id), `the judge of ${m.id} is still deciding…`)) return;
+    this.chip('replay');
+    const W = m.winner === A.id ? A : B, L = W === A ? B : A, jk = 'judge:' + m.id;
+    this.judge = { x: 100, look: JUDGE_LOOK(strHash(m.id)), sign: null };
+    this.both(`${tag('JUDGE')}The judge of ${m.id} stands and checks every attack`, 'sys', jk);
+    this.status(`The judge of ${m.id} checks every attack.`);
     await this.wait(1200); if (!live()) return;
     for (const f of [A, B]) for (const t of (m.standing[f.id] || [])) {
       const opp = f === A ? m.b : m.a, idx = (m.atk[opp] || []).findIndex(x => x.title === t), tier = tierOf(m, f.id, t);
       if (idx >= 0 && f.lodged[idx]) f.lodged[idx].state = 'standing';
-      this.bubble(f, 'STANDING', `${t}: the rebuttal didn't hold`, 1800);
+      this.log(f, `${tag('STANDING')}${q(t)} still stands: the rebuttal didn't hold`, '', jk);
       this.setAnim(f, 'hurt', true, 300); f.hp = Math.max(6, f.hp - DMG[tier] * 1.5);
       this.burst(f.x, f.y - 8, '#e0483c', 10, 50, 500); this.shake = 180;
-      await this.wait(1800); if (!live()) return;
+      await this.wait(1500); if (!live()) return;
     }
-    this.judge.arm = true;
-    this.badges = [{ f: L, up: false }, { f: W, up: true }];
-    this.status(`Thumbs down for ${L.id}. Scores ${W.id} ${m.totals[W.id]}, ${L.id} ${m.totals[L.id]}${m.fatal[L.id] ? ', with a verified fatal flaw' : ''}. ${m.reason || ''}`);
-    await this.wait(2000); if (!live()) return;
-    this.badges = [];
+    this.judge.sign = W.color;
+    this.both(`${tag('JUDGE')}The judge picks ${this.name(W)}: ${m.totals[W.id]} to ${m.totals[L.id]}${m.fatal[L.id] ? `. ${this.name(L)} has a verified fatal flaw` : ''}. ${esc(m.reason || '')}`, 'sys', jk);
+    this.status(`The judge picks ${W.id}, ${m.totals[W.id]} to ${m.totals[L.id]}.`);
+    await this.wait(900); if (!live()) return;
+    this.flight = { x0: 105, y0: 18, f: W, t0: this.time, dur: 900 };
+    await this.wait(900); if (!live()) return;
+    W.laurel = true; this.state(W, 'winner');
+    this.banner(`${W.id} wins`);
+    await this.wait(1800); if (!live()) return;
     this.banner('Finish him!', true);
-    await this.wait(1400); if (!live()) return;
+    await this.wait(1200); if (!live()) return;
     W.atkW = bigWeapon(m.id);
     await this.moveTo(W, L.x - W.dir * 16, L.y, 110, 'charge'); if (!live()) return;
     this.setAnim(W, 'swing', true, 600); await this.wait(125); if (!live()) return;
     this.shake = 450; this.burst(L.x, L.y - 8, '#e0483c', 26, 80, 800); this.burst(L.x, L.y - 8, C.white, 10, 60, 300);
-    L.hp = 0; L.alive = false; L.lodged = []; this.setAnim(L, 'dead', true);
-    await this.wait(1200); if (!live()) return;
+    L.hp = 0; L.alive = false; L.lodged = []; this.setAnim(L, 'dead', true); this.state(L, 'fallen');
+    this.log(W, `${tag('FALL', 'FINISH')}finishes ${this.name(L)} with a ${W.atkW.name}`, '', jk);
+    this.log(L, `${tag('FALL', 'FALLEN')}falls in round ${m.round}`, '', jk);
+    await this.wait(1100); if (!live()) return;
     this.judge = null;
-
-    this.status(`${W.id} loots the body: each attack it fixed makes it stronger`);
+    this.status(`${W.id} loots the body: every attack it fixed makes it stronger.`);
     await this.moveTo(W, L.x - W.dir * 14, L.y, 30, 'walk'); if (!live()) return;
     W.dir = L.x > W.x ? 1 : -1;
     this.setAnim(W, 'loot', true);
     for (const s of (m.survived.length ? m.survived : ['the win itself'])) {
-      this.bubble(W, 'LOOT', '+ fixed: ' + s, 1500); this.burst(L.x, L.y - 6, C.gold, 8, 30, 500);
-      await this.wait(1500); if (!live()) return;
+      this.log(W, `${tag('LOOT')}takes the fix for ${q(s)}`, '', jk); this.burst(L.x, L.y - 6, C.gold, 8, 30, 500);
+      await this.wait(1100); if (!live()) return;
     }
     W.hp = 100; W.lodged = [];
-    this.setAnim(W, 'victory', true); await this.wait(1400); if (!live()) return;
+    this.setAnim(W, 'victory', true); await this.wait(1300); if (!live()) return;
     this.status(`${W.id} wanders off to wait for round ${m.round + 1}. Hover the body to see what killed ${L.id}.`);
     await this.moveTo(W, W.x < 100 ? 26 : 174, 90, 18, 'walk'); if (!live()) return;
     this.setAnim(W, 'think', true);
+  }
+  async volley(att, def) {
+    const gen = this.gen, live = () => gen === this.gen, m = this.m, k = `attack:${m.id}:${att.id}`, list = m.atk[att.id] || [];
+    this.status(`${att.id} attacks ${def.id}'s solution.`);
+    if (!list.length) { this.log(att, `${tag('HIT', 'NONE')}reads ${this.name(def)}'s solution and finds nothing to attack`, '', k); this.setAnim(att, 'think', true, 900); await this.wait(900); return; }
+    for (let i = 0; i < list.length; i++) {
+      const atk = list[i], wp = pickWeaponFor(atk.tier, m.id + att.id + i);
+      this.log(att, `${tag(atk.tier)}${wp.kind === 'melee' ? 'swings a' : 'throws a'} ${wp.name} at ${this.name(def)}: ${q(atk.title)}`, '', k);
+      await this.wait(250); if (!live()) return;
+      await this.strike(att, def, atk, wp, i); if (!live()) return;
+      this.log(def, `${tag('HIT')}hit by ${q(atk.title)}`, 'dim', k);
+      await this.wait(650); if (!live()) return;
+    }
+  }
+  async defend(f, opp) {
+    const gen = this.gen, live = () => gen === this.gen, m = this.m, k = `defend:${m.id}:${f.id}`;
+    const took = m.atk[opp.id] || [], def = m.def[f.id] || [];
+    this.status(`${f.id} answers the attacks it took.`);
+    if (!took.length) { this.log(f, `${tag('HIT', 'NONE')}wasn't attacked, resubmits its solution`, 'dim', k); return; }
+    for (let i = 0; i < took.length; i++) {
+      const d = def[i] || { stance: 'CONCEDE', answer: '' }, w = f.lodged[i];
+      if (d.stance === 'REBUT') {
+        this.setAnim(f, 'block', true, 700); this.burst(f.x + f.dir * 8, f.y - heightOf(f) / 2, C.spark, 10, 50, 350);
+        this.log(f, `${tag('REBUT')}blocks ${q(took[i].title)}: ${esc(d.answer)}`, '', k);
+      } else {
+        this.setAnim(f, 'heal', true, 1200); this.burst(f.x, f.y - 12, C.heal, 8, 30, 500, -20);
+        this.log(f, `${tag('CONCEDE')}fixes ${q(took[i].title)}: ${esc(d.answer)}`, '', k);
+      }
+      if (w) w.state = 'gone';
+      f.hp = Math.min(100, f.hp + DMG[took[i].tier]);
+      await this.wait(1300); if (!live()) return;
+    }
   }
   async strike(att, def, atk, wp, i) {
     const gen = this.gen, live = () => gen === this.gen;
@@ -1341,8 +1500,8 @@ function seg(id, items, current, onPick) {
     el.append(b);
   }
 }
-function interestingMatch(run) {
-  const all = run.rounds.flatMap(rd => rd.matches);
+function interestingMatch(run, round) {
+  const all = run.rounds.filter(rd => !round || rd.n === round).flatMap(rd => rd.matches);
   const score = m => {
     const st = Object.values(m.def).flat().map(d => d.stance);
     return (st.includes('REBUT') ? 2 : 0) + (st.includes('CONCEDE') ? 2 : 0) + ((m.standing[m.loser] || []).length ? 2 : 0)
@@ -1353,30 +1512,55 @@ function interestingMatch(run) {
 
 sheet(); strip(); people();
 const RUNS = window.RUNS;
-const player = new RunPlayer(document.getElementById('arena'), document.getElementById('arenaOverlay'), document.getElementById('arenaStatus'));
-window.duel = new Duel(document.getElementById('duel'), document.getElementById('duelOverlay'), document.getElementById('duelStatus'));
-const scrub = document.getElementById('scrub'), clockEl = document.getElementById('clock');
+const player = new RunPlayer(document.getElementById('arena'), document.getElementById('arenaOverlay'), document.getElementById('arenaStatus'), document.getElementById('feed'));
+const duel = new Duel(document.getElementById('duel'), document.getElementById('duelOverlay'), document.getElementById('duelStatus'), player);
+function openFight(m, scroll = true) {
+  const look = id => {
+    const f = player.fighter(id);
+    return { build: f ? f.build : 'sonnet', color: COLOURS[player.run.agents[id].card[0]], card: player.run.agents[id] };
+  };
+  duel.load(m, look(m.a), look(m.b));
+  if (scroll) document.getElementById('duelBench').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+const scrub = document.getElementById('scrub'), clockEl = document.getElementById('clock'), liveChip = document.getElementById('liveChip');
+const toEnd = document.getElementById('toEnd'), playBtn = document.getElementById('playBtn');
 let dragging = false;
-player.onLoad = () => { scrub.max = Math.round(player.duration); };
-player.onClock = () => { if (!dragging) scrub.value = Math.round(player.evClock); clockEl.textContent = clock(player.realTime()) + ' into the run'; };
+player.onClock = () => {
+  scrub.max = Math.round(player.liveHead);
+  if (!dragging) scrub.value = Math.round(player.evClock);
+  clockEl.textContent = clock(player.realTime()) + ' into the run';
+  const kind = player.mode === 'live' ? (player.atLive ? 'live' : 'behind') : 'replay';
+  liveChip.className = 'chip-live ' + kind;
+  liveChip.textContent = kind === 'live' ? 'LIVE' : kind === 'behind' ? 'BEHIND LIVE' : 'REPLAY';
+  toEnd.textContent = player.mode === 'live' ? 'Go live' : 'Skip to the end';
+};
 scrub.addEventListener('pointerdown', () => { dragging = true; });
 scrub.addEventListener('input', () => { dragging = true; });
 scrub.addEventListener('change', () => { dragging = false; player.seek(+scrub.value); });
-document.getElementById('toEnd').onclick = () => player.seek(player.duration);
-function loadRun(key) {
-  const run = RUNS[key];
-  player.load(run);
-  const m = interestingMatch(run);
-  const look = id => ({ build: player.buildMode === 'mixed' ? BUILD_IDS[strHash(id) % 4] : player.buildMode, color: COLOURS[run.agents[id].card[0]], card: run.agents[id] });
-  window.duel.load(m, look(m.a), look(m.b));
+toEnd.onclick = () => player.goLive();
+document.getElementById('restart').onclick = () => player.seek(0);
+playBtn.onclick = () => { player.paused = !player.paused; playBtn.textContent = player.paused ? 'Play' : 'Pause'; };
+const duelPlay = document.getElementById('duelPlay');
+duelPlay.onclick = () => { duel.paused = !duel.paused; duelPlay.textContent = duel.paused ? 'Play' : 'Pause'; };
+document.getElementById('duelReplay').onclick = () => { duel.paused = false; duelPlay.textContent = 'Pause'; duel.run(); };
+
+function pickFight() {
+  if (player.mode === 'live' && player.openRound) {
+    const rd = player.run.rounds[player.openRound - 1];
+    const going = rd.matches.filter(m => !player.has('judge:' + m.id));
+    if (going.length) return interestingMatch({ rounds: [{ n: rd.n, matches: going }] });
+  }
+  return interestingMatch(player.run, 1);
 }
+function loadRun(key) { player.load(RUNS[key]).then(() => openFight(pickFight(), false)); }
 let runKey = '32';
 seg('runSeg', Object.keys(RUNS).map(k => [k, k + ' agents']), runKey, v => { runKey = v; loadRun(v); });
+seg('modeSeg', [['live', 'Live'], ['replay', 'Finished']], 'live', v => { player.setMode(v, true).then(() => openFight(pickFight(), false)); });
 seg('mapSeg', [['oval', 'Top-down oval'], ['pano', 'Side panorama']], 'oval', v => { player.variant = v; player.seek(player.evClock); });
 seg('buildSeg', BUILD_IDS.map(b => [b, BUILDS[b].name]).concat([['mixed', 'Mixed']]), 'sonnet', v => { player.buildMode = v; stripBuild = v === 'mixed' ? 'sonnet' : v; player.seek(player.evClock); });
+seg('namesSeg', [[false, 'Off'], [true, 'On']], false, v => { player.names = v; });
 seg('speedSeg', [[1, '1x'], [2, '2x'], [4, '4x'], [8, '8x']], 1, v => { player.speed = v; });
-seg('duelSpeed', [[1, '1x'], [2, '2x']], 1, v => { window.duel.speed = v; });
-document.getElementById('duelReplay').onclick = () => window.duel.run();
+seg('duelSpeed', [[.5, '0.5x'], [1, '1x'], [2, '2x'], [4, '4x']], 1, v => { duel.speed = v; });
 loadRun(runKey);
 })();
 </script>
