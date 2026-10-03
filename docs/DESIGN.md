@@ -2,7 +2,7 @@
 
 A web viewer that turns a `/arena` run into a medieval pixel-art battle you can watch live, leave, and
 come back to. This file covers what the skill actually does, what of it can be shown honestly, and the
-proposed design. The style preview is `design/preview.html` (open it in a browser).
+proposed design. The style preview is `design/arena-preview.html`, a standalone file you can open anywhere.
 
 ## 1. Which skill
 
