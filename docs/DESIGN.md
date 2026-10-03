@@ -132,3 +132,20 @@ python3 tools/make_fixture.py --agents 16 --live 0.5 --out fixtures/live
 1. Run-wide build (honest to the skill) vs a fork that mixes models per agent.
 2. Local `viewer.py` reading `.arena/` (recommended) vs a hosted page you upload a run folder to.
 3. DOM/SVG sprites (simple, crisp, easy hover) vs Canvas/PixiJS (scales to more motion).
+
+## 7. What got built
+
+The decisions above were settled in the asset lab (`design/asset-lab.html`) and built into `app/`
+with `viewer.py`:
+
+- Both views (top-down oval and side panorama), switchable at any time.
+- Live and replay come from one timeline: file mtimes, with long waits compressed. A run still going
+  opens just behind live and follows new files; rewinding shows *Behind live*; finished runs replay at
+  1x to 8x.
+- A verdict counts as soon as its file lands. The winner is worked out with the skill's own
+  `bracket.decide`, so the viewer doesn't wait for the orchestrator's `collect`.
+- Judges pick the winner: a placard showing the winner, then a laurel. No thumbs.
+- The fight view follows a live fight file by file, or replays a finished one. It has a compact
+  outlined HUD (name, model, health, a scrollable log) in its top corners.
+- The lobby builds the `/arena` command and shows the cost from the same arithmetic as
+  `bracket.py plan`. With `--allow-launch` it starts the run through `claude -p`.

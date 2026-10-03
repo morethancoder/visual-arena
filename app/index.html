@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;600&family=Jacquard+24&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#/">The Arena</a>
+  <span class="crumb" id="crumb"></span>
+  <span class="spacer"></span>
+  <span class="conn" id="conn"></span>
+</header>
+
+<main>
+  <!-- ============================================================ lobby -->
+  <section id="lobby" hidden>
+    <div class="hero">
+      <p class="kicker">For the /arena Claude Code skill</p>
+      <p class="lede">Many copies of Claude get the same task and a different strategy. They attack each other's
+        answers, defend and fix their own, and a judge sends one home each match until one is left. Set the fight
+        up here, then watch it.</p>
+    </div>
+    <div class="lobby-grid">
+      <form id="newRun" class="panel" autocomplete="off">
+        <h2>New arena</h2>
+        <label for="task" class="flabel">The task</label>
+        <textarea id="task" rows="5" required placeholder="Write the headline for our pricing page. Under 10 words, confident, a little playful, never cute."></textarea>
+        <span class="flabel">Competitors</span>
+        <div class="field">
+          <span class="seg" id="agentsSeg"></span>
+          <input type="number" id="agentsCustom" min="2" max="2160" placeholder="other" aria-label="Another number of competitors">
+        </div>
+        <details class="more">
+          <summary>More options</summary>
+          <label for="baseline" class="flabel">Answer to beat <span>(optional) The answer you rejected. The champion is judged against it at the end.</span></label>
+          <textarea id="baseline" rows="3"></textarea>
+          <label for="seed" class="flabel">Seed <span>(optional) Same seed, same cards and bracket.</span></label>
+          <input id="seed" type="number" min="0" step="1">
+          <label class="check"><input type="checkbox" id="plugin"> The skill is installed as a plugin (<code>/arena-skill:arena</code>)</label>
+        </details>
+        <div class="cost" id="cost"></div>
+        <span class="flabel">Command</span>
+        <div class="cmd"><code id="cmd"></code><button type="button" id="copyCmd">Copy</button></div>
+        <div class="actions">
+          <button type="submit" class="primary" id="startBtn">Start the arena</button>
+          <span class="note" id="launchNote"></span>
+        </div>
+        <pre class="launchlog" id="launchLog" hidden></pre>
+      </form>
+      <div class="panel">
+        <h2>Runs</h2>
+        <p class="note" id="runsNote"></p>
+        <ol class="runs" id="runs"></ol>
+        <div class="actions">
+          <button type="button" id="demoBtn">Watch a demo run</button>
+          <label class="filebtn" for="fileIn">Open a run file</label>
+          <input type="file" id="fileIn" accept=".json,application/json" hidden>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ a run -->
+  <section id="arenaScreen" hidden>
+    <div class="runhead">
+      <div class="runtitle">
+        <h1 id="runTitle"></h1>
+        <p class="task" id="runTask"></p>
+      </div>
+      <div class="controls">
+        <span class="group"><span class="label">View</span><span class="seg" id="mapSeg"></span></span>
+        <span class="group"><span class="label">Model</span><span class="seg" id="buildSeg"></span></span>
+        <span class="group"><span class="label">Names</span><span class="seg" id="namesSeg"></span></span>
+      </div>
+    </div>
+
+    <div class="arena-grid">
+      <div class="col-main">
+        <div class="bench" id="arenaBench">
+          <canvas id="arena" aria-label="The colosseum"></canvas>
+          <div class="overlay" id="arenaOverlay"></div>
+          <div class="chip-live live" id="liveChip">LIVE</div>
+        </div>
+        <div class="timeline">
+          <button class="primary" id="playBtn">Pause</button>
+          <span class="seg" id="speedSeg"></span>
+          <input type="range" id="scrub" min="0" max="1000" step="50" value="0" aria-label="Timeline">
+          <span class="clock" id="clock">0:00:00</span>
+          <button id="toEnd">Go live</button>
+          <button id="restart">From the start</button>
+        </div>
+        <div class="status" id="arenaStatus"></div>
+      </div>
+      <aside class="feed-wrap col-side">
+        <header>Arena feed <span>Click a row to watch that fight</span></header>
+        <ol class="log" id="feed"></ol>
+      </aside>
+    </div>
+
+    <details class="panel results" id="results" hidden>
+      <summary id="resultsSummary">Show the result</summary>
+      <div id="resultsBody"></div>
+    </details>
+
+    <h2 class="section">The fight <span id="duelId"></span></h2>
+    <div class="bench" id="duelBench">
+      <canvas id="duel" aria-label="Close-up fight"></canvas>
+      <div class="overlay" id="duelOverlay"></div>
+      <div class="chip-live replay" id="duelChip">REPLAY</div>
+      <div class="hud">
+        <section class="fcard" id="fcA">
+          <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
+          <div class="cardline"></div>
+          <div class="hpbar"><i></i><span></span></div>
+          <ol class="log"></ol>
+        </section>
+        <section class="fcard" id="fcB">
+          <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
+          <div class="cardline"></div>
+          <div class="hpbar"><i></i><span></span></div>
+          <ol class="log"></ol>
+        </section>
+      </div>
+    </div>
+    <div class="timeline">
+      <button class="primary" id="duelPlay">Pause</button>
+      <button id="duelReplay">Replay fight</button>
+      <span class="seg" id="duelSpeed"></span>
+    </div>
+    <div class="status" id="duelStatus"></div>
+  </section>
+  <div class="tip" id="tip" hidden></div>
+</main>
+
+<script src="sprites.js"></script>
+<script src="engine.js"></script>
+<script src="player.js"></script>
+<script src="duel.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
