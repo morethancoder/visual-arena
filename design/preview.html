@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arena Style Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jacquard+24&family=Pixelify+Sans:wght@400;600&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #17141a;      /* page */
+    --stone: #2a2530;      /* panels */
+    --stone-2: #3a3340;
+    --sand: #c9a46a;       /* arena floor */
+    --sand-2: #a8844f;
+    --parchment: #f4ecd8;
+    --ink: #2a1f17;
+    --gold: #e8c14a;
+    --blood: #c2453d;
+    --steel: #cfd6dc;
+    --glow: #7fd1e8;
+    --muted: #a59c8c;
+    --minor: #cfd6dc;
+    --major: #f2a33a;
+    --fatal: #e0483c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--night); color: var(--parchment);
+    font-family: 'Pixelify Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.45;
+  }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1, h2 { font-family: 'Jacquard 24', serif; font-weight: 400; color: var(--gold); margin: 0; }
+  h1 { font-size: clamp(44px, 8vw, 72px); line-height: 1; }
+  h2 { font-size: 36px; margin-top: 56px; }
+  .lede { color: var(--muted); max-width: 70ch; }
+  .note { color: var(--muted); font-size: 14px; max-width: 75ch; }
+  code, .mono { font-family: 'VT323', monospace; font-size: 19px; }
+  svg { display: block; image-rendering: pixelated; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-top: 16px; }
+  .card {
+    background: var(--stone); border: 3px solid var(--stone-2); padding: 14px 12px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 96px;
+  }
+  .card b { color: var(--gold); font-weight: 600; }
+  .card span { font-size: 13px; color: var(--muted); text-align: center; }
+  .plinth { padding: 0 10px; border-bottom: 8px solid var(--sand-2); }
+
+  .bob { animation: bob 0.9s steps(2) infinite; }
+  @keyframes bob { 50% { transform: translateY(-3px); } }
+
+  .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
+  .tier { background: var(--stone); border: 3px solid var(--stone-2); padding: 14px; }
+  .tier h3 { margin: 0 0 4px; font-size: 18px; }
+  .tier .w { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 14px; color: var(--muted); }
+  .MINOR h3 { color: var(--minor); } .MAJOR h3 { color: var(--major); } .FATAL h3 { color: var(--fatal); }
+
+  table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 15px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--stone-2); vertical-align: top; }
+  th { color: var(--gold); font-weight: 600; }
+  td:first-child { white-space: nowrap; }
+  .table-wrap { overflow-x: auto; }
+
+  /* ---------------------------------------------------------------- duel stage */
+  .stage-wrap { margin-top: 16px; overflow-x: auto; }
+  .stage {
+    position: relative; width: 860px; height: 420px; overflow: hidden; margin: 0 auto;
+    background:
+      linear-gradient(to bottom, transparent 62%, var(--sand) 62%, var(--sand-2) 100%),
+      repeating-linear-gradient(90deg, #2f2934 0 46px, #28232d 46px 48px),
+      var(--stone);
+    border: 4px solid var(--stone-2);
+  }
+  .stage::before { /* stone wall courses */
+    content: ''; position: absolute; inset: 0 0 38% 0;
+    background: repeating-linear-gradient(to bottom, transparent 0 22px, rgba(0,0,0,.25) 22px 24px);
+  }
+  .torch { position: absolute; top: 70px; width: 10px; height: 26px; background: #5a3a22; }
+  .torch::after {
+    content: ''; position: absolute; left: -5px; top: -18px; width: 20px; height: 20px;
+    background: radial-gradient(circle, #f7e08a 0 30%, #f2a33a 31% 55%, transparent 56%);
+    animation: flicker 0.4s steps(2) infinite;
+  }
+  @keyframes flicker { 50% { transform: scale(1.15) translateY(-2px); opacity: .85; } }
+  .judge-box {
+    position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-size: 13px; color: var(--muted);
+  }
+  .fighter { position: absolute; bottom: 92px; transition: filter .4s; }
+  .fighter .body { transform-origin: 50% 100%; }
+  .fighter.dead .body { filter: grayscale(1) brightness(.6); }
+  .tag {
+    position: absolute; bottom: -54px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+    text-align: center; font-size: 13px; color: var(--ink); background: var(--parchment);
+    padding: 2px 8px; border: 2px solid var(--ink);
+  }
+  .tag b { display: block; font-size: 15px; }
+  .stuck { position: absolute; pointer-events: none; }
+  .stuck.standing { filter: drop-shadow(0 0 3px var(--fatal)); }
+  .proj { position: absolute; pointer-events: none; z-index: 5; }
+  .fx { position: absolute; pointer-events: none; z-index: 6; }
+  .bubble {
+    position: absolute; z-index: 8; max-width: 300px; padding: 6px 10px;
+    background: var(--parchment); color: var(--ink); border: 3px solid var(--ink);
+    font-family: 'VT323', monospace; font-size: 19px; line-height: 1.1;
+  }
+  .bubble::after {
+    content: ''; position: absolute; bottom: -12px; left: 24px; border: 6px solid transparent;
+    border-top-color: var(--ink);
+  }
+  .bubble .sev { font-family: 'Pixelify Sans'; font-weight: 600; font-size: 13px; letter-spacing: .04em; }
+  .sev.MINOR { color: #5f6b75; } .sev.MAJOR { color: #b8661a; } .sev.FATAL { color: var(--blood); }
+  .sev.REBUT { color: #2f6aa8; } .sev.CONCEDE { color: #3c8a5f; }
+  .banner {
+    position: absolute; left: 50%; top: 150px; transform: translateX(-50%); z-index: 9;
+    font-family: 'Jacquard 24', serif; font-size: 44px; color: var(--gold);
+    text-shadow: 3px 3px 0 #000; white-space: nowrap; pointer-events: none;
+  }
+  .scores {
+    position: absolute; top: 74px; width: 200px; z-index: 7; font-size: 12px;
+    background: rgba(23,20,26,.85); border: 2px solid var(--stone-2); padding: 6px 8px;
+  }
+  .scores .bar { height: 7px; background: var(--stone-2); margin: 1px 0 4px; }
+  .scores .bar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .6s steps(8); }
+  .scores .tot { font-size: 18px; color: var(--gold); }
+  .grave { position: absolute; bottom: 92px; cursor: help; z-index: 4; }
+  .tip {
+    position: absolute; z-index: 20; width: 330px; padding: 10px 12px; display: none;
+    background: var(--parchment); color: var(--ink); border: 3px solid var(--ink); font-size: 14px;
+  }
+  .tip h4 { margin: 0 0 4px; font-family: 'Jacquard 24'; font-weight: 400; font-size: 26px; color: var(--blood); }
+  .tip ul { margin: 4px 0 0; padding-left: 18px; }
+  .controls { display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  button {
+    font: inherit; color: var(--ink); background: var(--gold); border: 3px solid var(--ink);
+    padding: 6px 14px; cursor: pointer; box-shadow: 3px 3px 0 #000;
+  }
+  button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+  .phase-strip { display: flex; justify-content: center; gap: 6px; margin-top: 10px; font-size: 13px; flex-wrap: wrap; }
+  .phase-strip span { padding: 2px 8px; border: 2px solid var(--stone-2); color: var(--muted); }
+  .phase-strip span.on { border-color: var(--gold); color: var(--gold); }
+  @keyframes shake { 25% { transform: translate(-4px, 2px); } 50% { transform: translate(4px, -2px); } 75% { transform: translate(-2px, 0); } }
+  .shake { animation: shake .25s steps(3) 2; }
+</style>
+</head>
+<body>
+<main>
+  <h1>The Arena</h1>
+  <p class="lede">Style preview for visualising Jake Schincariol's <code>/arena</code> skill. Pixel art in the Claude Code mascot's
+    style, a stone colosseum, parchment UI, blackletter titles. Every sprite on this page is generated from the grids in
+    <code>sprites.js</code>, so colours and builds are swapped at run time.</p>
+
+  <h2>Builds, one per model</h2>
+  <p class="note">The skill spawns every competitor on the model you are running, so one run is normally one build in
+    many colours. Builds only mix if the run mixes models.</p>
+  <div class="row" id="builds"></div>
+
+  <h2>Colour = reasoning mode</h2>
+  <p class="note">There are 15 reasoning modes, one colour each. Pairing avoids two agents with the same reasoning mode,
+    so the two fighters in a duel almost always differ in colour. A 100-agent run uses every colour.</p>
+  <div class="row" id="colours"></div>
+
+  <h2>Shield charge = strategy</h2>
+  <p class="note">The card's third part. The shield is painted in the agent's colour. The workflow shows only in the
+    hover card, because a fourth visual channel would be noise at 100 agents.</p>
+  <div class="row" id="shields"></div>
+
+  <h2>Weapon tier = attack label</h2>
+  <p class="note">Attackers label every attack <b>MINOR</b>, <b>MAJOR</b> or <b>FATAL</b>. The tier is exact. The
+    weapon inside a tier is random, so a long fight doesn't repeat itself.</p>
+  <div class="tiers" id="tiers"></div>
+
+  <h2>States</h2>
+  <div class="row" id="states"></div>
+
+  <h2>A real match, replayed</h2>
+  <p class="note">This is match <code id="mid"></code> from a generated 100-agent run. The attack titles, concede/rebut
+    stances, scores and judge's reason are read from the run's files. After the loser falls, hover the gravestone to
+    see what killed it.</p>
+  <div class="stage-wrap">
+    <div class="stage" id="stage">
+      <div class="torch" style="left:90px"></div><div class="torch" style="left:760px"></div>
+      <div class="judge-box" id="judge"></div>
+    </div>
+  </div>
+  <div class="phase-strip" id="phases"></div>
+  <div class="controls">
+    <button id="replay">Replay</button>
+    <button id="speed">Speed 1x</button>
+  </div>
+  <div class="tip" id="tip"></div>
+
+  <h2>What maps to what</h2>
+  <div class="table-wrap"><table id="map">
+    <tr><th>In the run folder</th><th>On screen</th></tr>
+    <tr><td><code>r0/aNNN.md</code> written</td><td>Competitor walks in through the gate (spawn).</td></tr>
+    <tr><td>round <code>matches[]</code>, <code>bye</code></td><td>Pairs walk to their pits; the bye sits in the stands with an ale.</td></tr>
+    <tr><td><code>…aNNN.attack.md</code> each <code>ATTACK k [TIER] title</code></td><td>One thrown weapon per attack, from that tier; the title in a speech bubble. Hits stick in the target.</td></tr>
+    <tr><td><code>…defense.md</code> <code>REBUT</code></td><td>Shield up, the stuck weapon is knocked out in a spark.</td></tr>
+    <tr><td><code>…defense.md</code> <code>CONCEDE</code></td><td>The weapon is pulled out and the wound is reforged with a blue anvil glow (the revised solution).</td></tr>
+    <tr><td><code>…verdict.json</code> scores</td><td>Five score bars per fighter, weighted total.</td></tr>
+    <tr><td><code>standing</code> attacks</td><td>Those weapons come back, stuck and glowing red.</td></tr>
+    <tr><td><code>fatal: true</code></td><td>Skull over the fighter. A fatal fighter can't win against a non-fatal one.</td></tr>
+    <tr><td><code>winner</code> / <code>advance</code></td><td>The loser falls and becomes a gravestone (round, killer, reason, standing wounds on hover). The winner moves on.</td></tr>
+    <tr><td><code>champion</code></td><td>Crown.</td></tr>
+    <tr><td><code>final.verdict.json</code></td><td>Last bout against the pale ghost of the answer you rejected. The result is shown even if the ghost wins.</td></tr>
+  </table></div>
+</main>
+
+<script src="sprites.js"></script>
+<script src="sample-match.js"></script>
+<script>
+(() => {
+  const S = window.ArenaSprites;
+  const $ = (s, r = document) => r.querySelector(s);
+  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+  const title = s => s.replace(/(^|-)(\w)/g, (_, d, c) => (d ? ' ' : '') + c.toUpperCase());
+  const orange = S.REASONING_COLOURS['first-principles'];
+
+  // ---- builds
+  const builds = [['haiku', 'Haiku', 'small, propeller cap'], ['sonnet', 'Sonnet', 'the mascot'],
+                  ['opus', 'Opus', 'the nerd'], ['fable', 'Fable', 'the muscle']];
+  for (const [k, name, sub] of builds) {
+    const c = el('div', 'card');
+    const p = el('div', 'plinth'); p.append(el('div', 'bob', S.svg(S.BUILDS[k], { px: 7, body: orange })));
+    c.append(p, el('b', null, name), el('span', null, sub));
+    $('#builds').append(c);
+  }
+  // ---- colours
+  for (const [id, hex] of Object.entries(S.REASONING_COLOURS)) {
+    const c = el('div', 'card');
+    c.append(el('div', null, S.svg(S.BUILDS.sonnet, { px: 4, body: hex })), el('span', null, title(id)));
+    $('#colours').append(c);
+  }
+  // ---- shields
+  const strategyNames = { 'simplest': 'Simplest thing', 'maximal-rigour': 'Maximal rigour', 'user-empathy': 'User empathy',
+    'edge-cases-first': 'Edge cases first', 'speed': 'Speed', 'defensive': 'Defensive', 'clarity': 'Clarity',
+    'completeness': 'Completeness', 'fewest-moving-parts': 'Fewest parts', 'explicit-trade-offs': 'Trade-offs',
+    'built-to-last': 'Built to last', 'concrete-specifics': 'Concrete specifics' };
+  Object.keys(S.CHARGES).forEach((id, i) => {
+    const c = el('div', 'card');
+    const hex = Object.values(S.REASONING_COLOURS)[i];
+    c.append(el('div', null, S.shieldFor(hex, id, 5)), el('span', null, strategyNames[id]));
+    $('#shields').append(c);
+  });
+  // ---- weapons
+  const tierText = { MINOR: 'A real but small gap.', MAJOR: 'A requirement missed, a real gap.', FATAL: 'Wrong or unusable for the task.' };
+  for (const tier of ['MINOR', 'MAJOR', 'FATAL']) {
+    const t = el('div', 'tier ' + tier, `<h3>${tier}</h3><span class="note">${tierText[tier]}</span>`);
+    for (const [name, grid] of Object.entries(S.WEAPONS[tier])) {
+      const w = el('div', 'w'); w.append(el('div', null, S.svg(grid, { px: 4 })), el('span', null, name)); t.append(w);
+    }
+    $('#tiers').append(t);
+  }
+  // ---- states
+  const states = [
+    ['REBUT', 'shield + spark', S.shieldFor(S.REASONING_COLOURS.contrarian, 'defensive', 4) + S.svg(S.PROPS.spark, { px: 4 })],
+    ['CONCEDE', 'reforged at the anvil', S.svg(S.PROPS.anvil, { px: 4 }) + S.svg(S.PROPS.glow, { px: 4 })],
+    ['Standing', 'still stuck after judging', S.svg(S.PROPS.stuck, { px: 6 })],
+    ['Fatal', 'verified by the judge', S.svg(S.PROPS.skull, { px: 5 })],
+    ['Bye', 'a round off', S.svg(S.PROPS.tankard, { px: 5 })],
+    ['Eliminated', 'hover for the cause', S.svg(S.PROPS.tombstone, { px: 5 })],
+    ['Champion', 'last one standing', S.svg(S.PROPS.crown, { px: 6 })],
+    ['Rejected answer', 'the final bout', `<div style="opacity:.6">${S.svg(S.GHOST, { px: 4 })}</div>`],
+  ];
+  for (const [name, sub, art] of states) {
+    const c = el('div', 'card'); c.append(el('div', 'row', art)); c.lastChild.style.margin = 0;
+    c.append(el('b', null, name), el('span', null, sub)); $('#states').append(c);
+  }
+
+  // ---------------------------------------------------------------- the duel
+  const M = window.SAMPLE_MATCH;
+  $('#mid').textContent = M.match;
+  const stage = $('#stage');
+  const PX = 7;
+  const PHASES = ['Attack', 'Defend', 'Judge', 'Verdict'];
+  $('#phases').innerHTML = PHASES.map(p => `<span data-p="${p}">${p}</span>`).join('');
+  let speed = 1, runId = 0;
+  const wait = ms => new Promise(r => setTimeout(r, ms / speed));
+  const phase = p => document.querySelectorAll('#phases span').forEach(s => s.classList.toggle('on', s.dataset.p === p));
+  const rng = (() => { let x = 7; return () => (x = (x * 16807) % 2147483647) / 2147483647; })();
+
+  function fighter(side, x) {
+    const f = M[side];
+    const colour = S.REASONING_COLOURS[f.card.reasoning];
+    const flip = side === 'b';
+    const node = el('div', 'fighter');
+    node.style.left = x + 'px';
+    const body = el('div', 'body', S.svg(S.BUILDS.sonnet, { px: PX, body: colour, flip }));
+    const shield = el('div', 'fx', S.shieldFor(colour, f.card.strategy, 4));
+    shield.style.cssText += `left:${flip ? -22 : 84}px; top:20px; opacity:0;`;
+    node.append(body, shield, el('div', 'tag', `<b>${f.id}</b>${f.cardNames.reasoning}`));
+    stage.append(node);
+    return { side, data: f, node, body, shield, colour, flip, x, wounds: {} };
+  }
+
+  function bubble(over, html, ms = 1500) {
+    const b = el('div', 'bubble', html);
+    b.style.left = (over.x - 30 + (over.flip ? -120 : 0)) + 'px';
+    b.style.bottom = (92 + 90) + 'px';
+    stage.append(b);
+    setTimeout(() => b.remove(), ms / speed);
+    return b;
+  }
+
+  async function throwAt(from, to, atk) {
+    const w = S.pick(atk.tier, rng);
+    from.body.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${from.flip ? -18 : 18}px)` }, { transform: 'translateX(0)' }],
+      { duration: 300 / speed, easing: 'steps(3)' });
+    bubble(from, `<span class="sev ${atk.tier}">${atk.tier} · ${w.name}</span><br>${atk.title}`, 1700);
+    const p = el('div', 'proj', S.svg(w.grid, { px: atk.tier === 'FATAL' ? 4 : 3, flip: from.flip }));
+    const sx = from.x + (from.flip ? -10 : 90), ex = to.x + (to.flip ? 10 : 40);
+    const y = 240 - 60 - rng() * 30;
+    p.style.left = sx + 'px'; p.style.top = y + 'px';
+    stage.append(p);
+    const arc = atk.tier === 'FATAL' ? -70 : -30;
+    await p.animate([
+      { transform: 'translate(0,0) rotate(0deg)' },
+      { transform: `translate(${(ex - sx) / 2}px, ${arc}px) rotate(${w.name === 'axe' || w.name === 'warhammer' ? (from.flip ? -180 : 180) : 0}deg)` },
+      { transform: `translate(${ex - sx}px, 0) rotate(${w.name === 'axe' || w.name === 'warhammer' ? (from.flip ? -360 : 360) : 0}deg)` },
+    ], { duration: 650 / speed, easing: 'linear' }).finished;
+    p.remove();
+    // impact
+    if (atk.tier === 'FATAL') { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); }
+    to.body.animate([{ filter: 'brightness(3)' }, { filter: 'none' }], { duration: 200 / speed, easing: 'steps(2)' });
+    const s = el('div', 'stuck', S.svg(S.PROPS.stuck, { px: 4, flip: !to.flip }));
+    s.style.left = (to.flip ? 10 + rng() * 40 : 20 + rng() * 40) + 'px';
+    s.style.top = (8 + rng() * 34) + 'px';
+    to.node.append(s);
+    to.wounds[atk.n] = s;
+  }
+
+  async function defend(f, atk) {
+    const wound = f.wounds[atk.n];
+    if (atk.stance === 'REBUT') {
+      f.shield.animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 1 }, { opacity: 0 }], { duration: 900 / speed, easing: 'steps(4)' });
+      const sp = el('div', 'fx', S.svg(S.PROPS.spark, { px: 4 }));
+      sp.style.left = wound.style.left; sp.style.top = wound.style.top;
+      f.node.append(sp);
+      wound.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${f.flip ? 60 : -60}px,-50px) rotate(200deg)`, opacity: 0 }],
+        { duration: 600 / speed, fill: 'forwards' });
+      setTimeout(() => sp.remove(), 500 / speed);
+    } else {
+      const g = el('div', 'fx', S.svg(S.PROPS.glow, { px: 4 }));
+      g.style.left = wound.style.left; g.style.top = wound.style.top;
+      f.node.append(g);
+      g.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-30px)', opacity: 0 }], { duration: 900 / speed });
+      wound.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600 / speed, fill: 'forwards' });
+      setTimeout(() => g.remove(), 900 / speed);
+    }
+    bubble(f, `<span class="sev ${atk.stance}">${atk.stance}</span><br>${atk.answer}`, 1500);
+    await wait(1100);
+  }
+
+  function scorePanel(f, left) {
+    const sc = M.scores[f.data.id];
+    const p = el('div', 'scores');
+    p.style.left = left + 'px';
+    const rows = [['correctness', 30], ['completeness', 25], ['robustness', 20], ['specificity', 15], ['clarity', 10]];
+    p.innerHTML = rows.map(([k, w]) => `${k} <span style="float:right">${sc[k]}/10 ×${w}</span><div class="bar"><i data-v="${sc[k]}"></i></div>`).join('')
+      + `<div class="tot">${M.totals[f.data.id]}</div>`;
+    stage.append(p);
+    requestAnimationFrame(() => p.querySelectorAll('i').forEach(i => i.style.width = i.dataset.v * 10 + '%'));
+    return p;
+  }
+
+  function banner(text, ms = 1400) {
+    const b = el('div', 'banner', text); stage.append(b);
+    b.animate([{ opacity: 0, transform: 'translateX(-50%) scale(.6)' }, { opacity: 1, transform: 'translateX(-50%) scale(1)' }], { duration: 250 / speed, easing: 'steps(3)' });
+    setTimeout(() => b.remove(), ms / speed);
+  }
+
+  async function run() {
+    const me = ++runId;
+    stage.querySelectorAll('.fighter,.bubble,.proj,.scores,.grave,.banner,.fx').forEach(n => n.remove());
+    $('#judge').innerHTML = S.svg(S.PROPS.scroll, { px: 4 }) + '<span>the judge</span>';
+    const A = fighter('a', 180), B = fighter('b', 590);
+    const alive = () => me === runId;
+    banner(`Round ${M.round} · ${M.match}`); await wait(1600); if (!alive()) return;
+
+    // ATTACK: both attack files are written in the same wave; we interleave them.
+    phase('Attack');
+    const volleys = [];
+    const n = Math.max(A.data.taken.length, B.data.taken.length);
+    for (let i = 0; i < n; i++) {
+      if (B.data.taken[i]) volleys.push([A, B, B.data.taken[i]]);
+      if (A.data.taken[i]) volleys.push([B, A, A.data.taken[i]]);
+    }
+    for (const [from, to, atk] of volleys) { await throwAt(from, to, atk); await wait(650); if (!alive()) return; }
+    await wait(500);
+
+    // DEFEND
+    phase('Defend');
+    for (const f of [A, B]) {
+      if (!f.data.taken.length) { bubble(f, '<span class="sev REBUT">NO ATTACKS RECEIVED</span>'); await wait(1000); }
+      for (const atk of f.data.taken) { await defend(f, atk); if (!alive()) return; }
+    }
+
+    // JUDGE
+    phase('Judge');
+    $('#judge').firstElementChild.animate([{ transform: 'rotate(-8deg)' }, { transform: 'rotate(8deg)' }, { transform: 'none' }], { duration: 600 / speed, iterations: 2 });
+    scorePanel(A, 20); scorePanel(B, 636);
+    for (const f of [A, B]) {
+      for (const t of (M.standing[f.data.id] || [])) {
+        const atk = f.data.taken.find(x => x.title === t);
+        const w = atk && f.wounds[atk.n];
+        if (w) { w.getAnimations().forEach(a => a.cancel()); w.style.opacity = 1; w.classList.add('standing'); }
+      }
+      if (M.scores[f.data.id].fatal) {
+        const sk = el('div', 'fx', S.svg(S.PROPS.skull, { px: 4 }));
+        sk.style.left = '36px'; sk.style.top = '-46px'; f.node.append(sk);
+        sk.animate([{ transform: 'translateY(10px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 400 / speed, easing: 'steps(4)' });
+      }
+    }
+    await wait(2600); if (!alive()) return;
+
+    // VERDICT
+    phase('Verdict');
+    const W = M.winner === A.data.id ? A : B, L = W === A ? B : A;
+    banner(`${W.data.id} goes through`, 1800);
+    const cr = el('div', 'fx', S.svg(S.PROPS.crown, { px: 4 })); cr.style.cssText += 'left:34px; top:-34px;'; W.node.append(cr);
+    L.node.classList.add('dead');
+    await L.body.animate([{ transform: 'rotate(0)' }, { transform: `rotate(${L.flip ? 90 : -90}deg)` }], { duration: 700 / speed, easing: 'steps(4)', fill: 'forwards' }).finished;
+    await wait(700); if (!alive()) return;
+    L.node.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500 / speed, fill: 'forwards' });
+    const g = el('div', 'grave', S.svg(S.PROPS.tombstone, { px: 7 }));
+    g.style.left = (L.x + 16) + 'px';
+    stage.append(g);
+    g.animate([{ transform: 'translateY(40px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 500 / speed, easing: 'steps(5)' });
+    wireTip(g, L, W);
+  }
+
+  function wireTip(g, L, W) {
+    const tip = $('#tip');
+    const standing = M.standing[L.data.id] || [];
+    const fatal = M.scores[L.data.id].fatal;
+    const killers = L.data.taken.filter(a => standing.includes(a.title));
+    tip.innerHTML = `<h4>Here lies ${L.data.id}</h4>
+      <div>${L.data.cardNames.reasoning} · ${L.data.cardNames.workflow} · ${L.data.cardNames.strategy}</div>
+      <div style="margin-top:6px">Fell in round ${M.round} to <b>${W.data.id}</b>, ${M.totals[L.data.id]} to ${M.totals[W.data.id]}.</div>
+      ${fatal ? '<div style="color:var(--blood)"><b>Verified fatal flaw.</b></div>' : ''}
+      <div style="margin-top:6px"><b>What killed it:</b>${killers.length ? '<ul>' + killers.map(k => `<li>[${k.tier}] ${k.title}, rebutted but still standing</li>`).join('') + '</ul>' : ' outscored, nothing left standing'}</div>
+      <div style="margin-top:6px"><b>Judge:</b> ${M.reason}</div>`;
+    g.onmouseenter = e => {
+      const r = g.getBoundingClientRect();
+      tip.style.display = 'block';
+      tip.style.left = Math.max(8, Math.min(window.scrollX + r.left - 140, window.scrollX + document.documentElement.clientWidth - 346)) + 'px';
+      tip.style.top = (window.scrollY + r.top - tip.offsetHeight - 10) + 'px';
+    };
+    g.onmouseleave = () => tip.style.display = 'none';
+  }
+
+  $('#replay').onclick = run;
+  $('#speed').onclick = e => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; e.target.textContent = `Speed ${speed}x`; };
+  run();
+})();
+</script>
+</body>
+</html>
