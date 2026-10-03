@@ -241,7 +241,7 @@ async function openRun(src, title) {
 }
 async function openDemo(live) {
   const full = window.DEMO_RUN || await getJSON('demo-run.json');
-  return openRun(live ? new SimulatedLive(full) : new StaticSource(full), live ? 'Demo run, live' : 'Demo run');
+  return openRun(live ? new SimulatedLive(full) : new StaticSource(full), window.DEMO_TITLE || (live ? 'Demo run, live' : 'Demo run'));
 }
 
 // ================================================================ lobby
@@ -350,6 +350,7 @@ async function route() {
   if (h === '#/demo') return openDemo(false);
   if (h === '#/demo-live') return openDemo(true);
   if (h === '#/file' && fileRun) return openRun(new StaticSource(fileRun), fileRun.run);
+  if (window.AUTO_OPEN && !location.hash) return openDemo(false);
   if (source) { source.stop(); source = null; }
   show('lobby');
   $('crumb').textContent = 'Lobby';

@@ -2,3 +2,4 @@ fixtures/
 __pycache__/
 .arena/
 dist/
+.dev/

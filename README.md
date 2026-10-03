@@ -18,6 +18,27 @@ pixel-art colosseum you can watch live, leave, and come back to.
 - **Results**: the champion's path, the final check against the answer you rejected, and the
   winning answer to copy.
 
+## Quick start
+
+```bash
+make dev        # watch a fake run being written live, no Claude Code or tokens needed
+make serve      # watch real runs: make serve ROOT=~/my-project
+make            # list every command
+```
+
+| command | what it does |
+| --- | --- |
+| `make dev` | writes a fake run in real time into `.dev/live` and serves it on :8765. Edit `app/` and refresh. Ctrl-C stops both |
+| `make serve` | watches `ROOT/.arena` (`ROOT=~/my-project`, `PORT=`, `MODEL=opus`, `SKILL=arena-skill:arena`) |
+| `make launch` | same, and the lobby's Start button runs Claude Code for you (spends tokens) |
+| `make demo-run` | serves a finished fake run to replay (`AGENTS=`, `SEED=`) |
+| `make install-skill` | copies the vendored `/arena` skill to `~/.claude/skills/arena` |
+| `make build` | builds `dist/the-arena.html`, one page with a demo run inside |
+| `make check` | compiles the Python, plays a fake tournament, exports it, parses the app's scripts |
+| `make export RUN=.arena/run-…` | prints a run's event log as JSON |
+| `make release VERSION=v0.2.0` | tags and pushes; GitHub Actions publishes the release |
+| `make clean` | removes generated runs and builds |
+
 ## Run it
 
 Python 3.8+, nothing to install. In the project where you run `/arena`:
@@ -56,7 +77,7 @@ of sub-agent calls before you start.
 
 ### Without a server
 
-`python3 tools/bundle_app.py` writes `dist/the-arena.html`, a single page with a demo run built in.
+`python3 tools/bundle_app.py` (or `make build`) writes `dist/the-arena.html`, a single page with a demo run built in.
 It can also open run files made with `viewer.py --export`.
 
 ## How it reads a run
