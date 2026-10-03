@@ -43,7 +43,8 @@
   .controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 12px; }
   .group { display: inline-flex; align-items: center; gap: 8px; }
   .label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
-  .seg { display: inline-flex; border: 2px solid #000; box-shadow: 2px 2px 0 #000; }
+  .seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 2px solid #000; box-shadow: 2px 2px 0 #000; }
+  .group { flex-wrap: wrap; max-width: 100%; }
   .seg button { border: 0; box-shadow: none; border-right: 2px solid #000; }
   .seg button:last-child { border-right: 0; }
   button {
@@ -104,21 +105,35 @@
   .feed-wrap header { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; font-weight: 700; flex-wrap: wrap; }
   .feed-wrap header span { color: var(--muted); font-weight: 400; font-size: 14px; }
 
-  /* fight view panels */
-  .fighters { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-  @media (max-width: 720px) { .fighters { grid-template-columns: 1fr; } }
-  .fcard { background: var(--panel); border: 2px solid var(--line); min-width: 0; }
-  .fcard header { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 12px 8px; }
-  .fcard .sw { width: 18px; height: 18px; border: 2px solid #000; grid-row: span 2; }
-  .fcard .name { font: 700 22px/1.1 var(--ui); }
-  .fcard .model { font-size: 14px; color: var(--muted); }
-  .fcard .state { font: 700 12px/1 var(--ui); letter-spacing: .06em; text-transform: uppercase; padding: 4px 7px; background: var(--panel-2); border: 1px solid var(--line); grid-row: span 2; }
+  /* fight view HUD: compact panels in the top corners of the fight screen */
+  .hud { position: absolute; inset: 8px 8px auto 8px; display: flex; justify-content: space-between; gap: 8px; pointer-events: none; }
+  .fcard {
+    width: 31%; min-width: 0; pointer-events: auto; background: rgba(16, 12, 20, .84);
+    border: 2px solid #000; outline: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(2px);
+  }
+  .fcard header { display: grid; grid-template-columns: auto 1fr auto; gap: 0 7px; align-items: center; padding: 6px 8px 4px; }
+  .fcard .sw { width: 12px; height: 12px; border: 1px solid #000; grid-row: span 2; }
+  .fcard .name { font: 700 16px/1.1 var(--ui); }
+  .fcard .model { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fcard .state { font: 700 10px/1 var(--ui); letter-spacing: .06em; text-transform: uppercase; padding: 3px 5px; background: var(--panel-2); border: 1px solid var(--line); grid-row: span 2; }
   .fcard .state.winner { background: var(--gold); color: #120e0a; } .fcard .state.fallen { background: #000; color: #fff; }
-  .fcard .cardline { padding: 0 12px 8px; font-size: 14px; color: var(--muted); }
-  .fcard .cardline b { color: var(--text); font-weight: 700; }
-  .hpbar { margin: 0 12px 10px; height: 14px; background: #3a1714; border: 2px solid #000; position: relative; }
+  .fcard .cardline { display: none; }
+  .hpbar { margin: 0 8px 6px; height: 9px; background: #3a1714; border: 1px solid #000; position: relative; }
   .hpbar i { position: absolute; inset: 0 auto 0 0; background: var(--heal); transition: width .25s steps(4); }
-  .hpbar span { position: absolute; right: 4px; top: -1px; font: 600 11px var(--mono); color: #fff; text-shadow: 1px 1px 0 #000; }
+  .hpbar span { display: none; }
+  .fcard .log { height: 120px; font-size: 12.5px; line-height: 1.35; background: transparent; border-top: 1px solid rgba(255,255,255,.12); padding: 2px 0; }
+  .fcard .log li { padding: 3px 8px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .fcard .log li.sys { background: rgba(232,193,74,.12); }
+  .fcard .log time { font-size: 10.5px; margin-right: 4px; }
+  .fcard .tag { font-size: 9.5px; padding: 2px 4px; margin-right: 4px; }
+  .fcard .log .sw { width: 8px; height: 8px; }
+  #duelBench .chip-live { top: auto; bottom: 8px; left: 8px; }
+  @media (max-width: 720px) {
+    .hud { position: static; flex-direction: column; padding: 8px; background: var(--night); }
+    .fcard { width: 100%; }
+    .fcard .log { height: 140px; }
+    #duelBench .chip-live { top: 8px; bottom: auto; }
+  }
   .tip {
     position: fixed; z-index: 20; width: min(330px, calc(100vw - 32px)); padding: 10px 12px; pointer-events: none;
     background: #f4ecd8; color: #22190f; border: 3px solid #000; font-size: 14.5px; box-shadow: 4px 4px 0 #000; line-height: 1.4;
@@ -198,6 +213,21 @@
     <canvas id="duel" aria-label="Close-up fight"></canvas>
     <div class="overlay" id="duelOverlay"></div>
     <div class="chip-live replay" id="duelChip">REPLAY</div>
+    <div class="hud">
+      <section class="fcard" id="fcA">
+        <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
+        <div class="cardline"></div>
+        <div class="hpbar"><i></i><span></span></div>
+        <ol class="log"></ol>
+      </section>
+      <section class="fcard" id="fcB">
+        <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
+        <div class="cardline"></div>
+        <div class="hpbar"><i></i><span></span></div>
+        <ol class="log"></ol>
+      </section>
+    </div>
+
   </div>
   <div class="timeline">
     <button class="primary" id="duelPlay">Pause</button>
@@ -205,21 +235,6 @@
     <span class="seg" id="duelSpeed"></span>
   </div>
   <div class="status" id="duelStatus"></div>
-  <div class="fighters">
-    <section class="fcard" id="fcA">
-      <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
-      <div class="cardline"></div>
-      <div class="hpbar"><i></i><span></span></div>
-      <ol class="log"></ol>
-    </section>
-    <section class="fcard" id="fcB">
-      <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
-      <div class="cardline"></div>
-      <div class="hpbar"><i></i><span></span></div>
-      <ol class="log"></ol>
-    </section>
-  </div>
-
   <h2>What would help next</h2>
   <ol class="ask">
     <li>Does the judge picking the winner with a placard and a laurel read well?</li>
