@@ -160,3 +160,11 @@ button.danger { background: #d6372b; color: #fff; }
 .stage.full .fcard .log { height: min(42vh, 380px); font-size: 14px; }
 .stage.full .hpbar { height: 13px; }
 .stage.full #duelBench .chip-live { top: 12px; bottom: auto; left: 50%; transform: translateX(-50%); }
+
+/* task-writing tips under the task box */
+.tips { margin-top: 8px; font-size: 14.5px; color: var(--muted); }
+.tips summary { cursor: pointer; font-weight: 700; }
+.tips p { margin: 8px 0 4px; }
+.tips ul { margin: 4px 0 0; padding-left: 20px; }
+.tips li { margin: 4px 0; }
+.tips b { color: var(--text); }

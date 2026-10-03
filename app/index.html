@@ -34,6 +34,25 @@
         <h2>New arena</h2>
         <label for="task" class="flabel">The task</label>
         <textarea id="task" rows="5" required placeholder="Write the headline for our pricing page. Under 10 words, confident, a little playful, never cute."></textarea>
+        <details class="tips">
+          <summary>How to write a task that wins</summary>
+          <p>The competitors, attackers and judges see only what you write here, nothing else. Each match is
+            scored on correctness, completeness against the requirements you state, specificity, robustness
+            and clarity. So:</p>
+          <ul>
+            <li><b>Make it stand on its own.</b> Say what the thing is, who it is for and why. Give absolute paths
+              to the files that matter, or paste the data.</li>
+            <li><b>State every requirement.</b> Length, format, tone, audience, stack, what must not change.
+              The judge can only hold answers to rules you wrote down.</li>
+            <li><b>Say what done looks like.</b> "A unified diff that passes <code>make check</code>" beats
+              "fix the bug".</li>
+            <li><b>Ask for the result, not the method.</b> Each competitor gets a different strategy; if you write
+              your own answer in, they all drift toward it.</li>
+            <li><b>One task per arena.</b> Split "do A, then B, then C" into separate runs.</li>
+            <li><b>Rejected an answer already?</b> Put it under <i>Answer to beat</i> and say in the task what
+              was wrong with it.</li>
+          </ul>
+        </details>
         <span class="flabel">Competitors</span>
         <div class="field">
           <span class="seg" id="agentsSeg"></span>
@@ -162,6 +181,16 @@
         <h2>Royal decree</h2>
         <p class="hint">By order of the Emperor, let the competitors fight over this task:</p>
         <textarea id="gTask" rows="6" placeholder="Write the task here, in your own hand…" aria-label="The task"></textarea>
+        <details class="tips">
+          <summary>Counsel for a decree that wins</summary>
+          <ul>
+            <li>The fighters see only this scroll. Say what the thing is, who it is for, and give file paths or data.</li>
+            <li>Write down every rule: length, format, tone, what must not change. The judge holds them to nothing else.</li>
+            <li>Say what done looks like.</li>
+            <li>Ask for the result, not the method, and keep your own answer out of it.</li>
+            <li>One task per decree.</li>
+          </ul>
+        </details>
         <details>
           <summary>An answer to beat</summary>
           <textarea id="gBaseline" rows="3" placeholder="(optional) The answer you rejected" aria-label="Answer to beat"></textarea>

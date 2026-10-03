@@ -79,3 +79,8 @@ body.in-game { overflow: hidden; }
   .gview#gThrone { align-items: flex-start; }
   #throne { position: fixed; inset: 0; margin: auto; z-index: -1; opacity: .5; }
 }
+
+/* counsel under the decree */
+.scroll .tips { font-size: 15px; color: #5a3c1e; }
+.scroll .tips ul { margin: 4px 0 0; padding-left: 18px; }
+.scroll .tips li { margin: 3px 0; }
