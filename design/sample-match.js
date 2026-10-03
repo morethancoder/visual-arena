@@ -1,53 +1,60 @@
 window.SAMPLE_MATCH = {
- "match": "r1-m08",
+ "match": "r1-m46",
  "round": 1,
  "a": {
-  "id": "a088",
+  "id": "a027",
   "card": {
    "reasoning": "probabilistic",
-   "workflow": "options-matrix",
-   "strategy": "edge-cases-first"
+   "workflow": "test-first",
+   "strategy": "maximal-rigour"
   },
   "cardNames": {
    "reasoning": "Probabilistic",
-   "workflow": "Options matrix",
-   "strategy": "Edge cases first"
+   "workflow": "Test first",
+   "strategy": "Maximal rigour"
   },
   "taken": [
    {
     "n": 1,
+    "tier": "MAJOR",
+    "title": "No audience signal",
+    "stance": "CONCEDE",
+    "answer": "Right. Fixed: no audience signal."
+   },
+   {
+    "n": 2,
     "tier": "FATAL",
     "title": "No call to action",
     "stance": "CONCEDE",
     "answer": "Right. Fixed: no call to action."
    },
    {
-    "n": 2,
+    "n": 3,
     "tier": "MINOR",
-    "title": "Price math is off",
+    "title": "Never mentions the three plans",
     "stance": "REBUT",
     "answer": "Wrong. The task never asks for that; see the second line of the task."
    },
    {
-    "n": 3,
+    "n": 4,
     "tier": "FATAL",
-    "title": "Generic SaaS phrasing",
-    "stance": "REBUT",
-    "answer": "Wrong. The task never asks for that; see the second line of the task."
+    "title": "Reads as cute, not playful",
+    "stance": "CONCEDE",
+    "answer": "Right. Fixed: reads as cute, not playful."
    }
   ]
  },
  "b": {
-  "id": "a006",
+  "id": "a038",
   "card": {
-   "reasoning": "constraint-first",
-   "workflow": "outline-first",
-   "strategy": "simplest"
+   "reasoning": "expert-panel",
+   "workflow": "draft-critique-rewrite",
+   "strategy": "concrete-specifics"
   },
   "cardNames": {
-   "reasoning": "Constraint first",
-   "workflow": "Outline first",
-   "strategy": "Simplest thing that works"
+   "reasoning": "Expert panel",
+   "workflow": "Draft, critique, rewrite",
+   "strategy": "Concrete specifics"
   },
   "taken": [
    {
@@ -59,49 +66,49 @@ window.SAMPLE_MATCH = {
    },
    {
     "n": 2,
-    "tier": "MINOR",
-    "title": "No call to action",
-    "stance": "REBUT",
-    "answer": "Wrong. The task never asks for that; see the second line of the task."
-   },
-   {
-    "n": 3,
-    "tier": "MAJOR",
+    "tier": "FATAL",
     "title": "Never mentions the three plans",
     "stance": "CONCEDE",
     "answer": "Right. Fixed: never mentions the three plans."
    }
   ]
  },
- "winner": "a006",
- "loser": "a088",
- "reason": "a006 fixed every attack it conceded; the other left a fatal miscount standing.",
+ "winner": "a027",
+ "loser": "a038",
+ "reason": "a027 named all three plans and kept the headline under ten words.",
  "totals": {
-  "a088": 79.5,
-  "a006": 81.0
+  "a027": 80.0,
+  "a038": 60.5
  },
+ "survived": [
+  "No audience signal",
+  "No call to action",
+  "Reads as cute, not playful"
+ ],
  "scores": {
-  "a088": {
-   "correctness": 8,
-   "completeness": 10,
-   "specificity": 7,
-   "robustness": 6,
-   "clarity": 8,
-   "fatal": true
-  },
-  "a006": {
-   "correctness": 8,
+  "a027": {
+   "correctness": 7,
    "completeness": 9,
    "specificity": 9,
    "robustness": 7,
+   "clarity": 9,
+   "fatal": false
+  },
+  "a038": {
+   "correctness": 7,
+   "completeness": 7,
+   "specificity": 6,
+   "robustness": 3,
    "clarity": 7,
    "fatal": false
   }
  },
  "standing": {
-  "a088": [
-   "Generic SaaS phrasing"
+  "a027": [
+   "Never mentions the three plans"
   ],
-  "a006": []
+  "a038": [
+   "Price math is off"
+  ]
  }
 };

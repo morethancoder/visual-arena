@@ -34,7 +34,7 @@ def main(d, mid):
            "a": side(d, rnd, mid, a, b, st["agents"][a]["card"]),
            "b": side(d, rnd, mid, b, a, st["agents"][b]["card"]),
            "winner": m["winner"], "loser": m["loser"], "reason": m["reason"],
-           "totals": m["scores"], "scores": v["scores"], "standing": v.get("standing", {})}
+           "totals": m["scores"], "survived": m.get("survived", []), "scores": v["scores"], "standing": v.get("standing", {})}
     print("window.SAMPLE_MATCH = " + json.dumps(out, indent=1) + ";")
 
 
