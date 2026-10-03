@@ -1,9 +1,16 @@
 name: Release
 
-# Push a tag like v0.1.0 to publish a release with the standalone page and a source zip.
+# Publishes a release with the standalone page and a source zip.
+# Either push a tag like v0.1.0, or run this workflow by hand with the version to release
+# (it then creates the tag on the commit it runs on).
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. v0.1.0'
+        required: true
 
 permissions:
   contents: write
@@ -22,16 +29,18 @@ jobs:
           python tools/make_fixture.py --agents 8 --seed 1 --out "$RUNNER_TEMP/fx"
           python viewer.py --export "$(ls -d "$RUNNER_TEMP"/fx/.arena/run-*)" > "$RUNNER_TEMP/run.json"
           python -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['done'] and d['champion'], 'export incomplete'" "$RUNNER_TEMP/run.json"
+      - name: Version
+        run: echo "TAG=${{ inputs.version || github.ref_name }}" >> "$GITHUB_ENV"
       - name: Build
         run: |
           python tools/bundle_app.py
-          git archive --format=zip --prefix=the-arena/ -o "dist/the-arena-${GITHUB_REF_NAME}.zip" HEAD
+          git archive --format=zip --prefix=the-arena/ -o "dist/the-arena-${TAG}.zip" HEAD
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          notes="docs/releases/${TAG}.md"
           [ -f "$notes" ] || notes=/dev/null
-          gh release create "$GITHUB_REF_NAME" \
-            "dist/the-arena.html" "dist/the-arena-${GITHUB_REF_NAME}.zip" \
-            --title "The Arena ${GITHUB_REF_NAME}" --notes-file "$notes"
+          gh release create "$TAG" --target "$GITHUB_SHA" \
+            "dist/the-arena.html" "dist/the-arena-${TAG}.zip" \
+            --title "The Arena ${TAG}" --notes-file "$notes"
