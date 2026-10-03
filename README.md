@@ -8,3 +8,5 @@ Claude mascots fight out the tournament in a colosseum you can watch live or com
 - `design/sprites.js`: the pixel sprite library
 - `tools/make_fixture.py`: generate a real `.arena/` run with stand-in agents, no tokens spent
 - `tools/export_match.py`: export one match as viewer events
+- `tools/export_run.py`: export a whole run (agents, every match, file-time events) for playback
+- `design/asset-lab.html`: the asset lab, built from `design/asset-lab.src.html` with `python3 tools/bundle_lab.py`

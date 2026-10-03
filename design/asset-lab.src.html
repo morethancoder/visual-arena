@@ -1,0 +1,1382 @@
+<title>Arena Asset Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jacquard+24&family=Pixelify+Sans:wght@400;600&family=VT323&display=swap" rel="stylesheet">
+<style>
+  /* Layout: one centred column of labelled test benches, each a pixel canvas with its controls underneath. */
+  :root {
+    color-scheme: dark;
+    --night: #16131a;
+    --stone: #26212c;
+    --stone-2: #3a3340;
+    --parchment: #f4ecd8;
+    --ink: #241b14;
+    --gold: #e8c14a;
+    --muted: #a69d8e;
+    --blood: #d8574a;
+    --heal: #6fd08c;
+    --display: 'Jacquard 24', 'Old English Text MT', serif;
+    --ui: 'Pixelify Sans', ui-rounded, system-ui, sans-serif;
+    --mono: 'VT323', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--night); color: var(--parchment); font-family: var(--ui); font-size: 16px; line-height: 1.45; }
+  main { max-width: 1000px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 80px; }
+  h1, h2 { font-family: var(--display); font-weight: 400; color: var(--gold); margin: 0; text-wrap: balance; }
+  h1 { font-size: clamp(44px, 9vw, 76px); line-height: 1; }
+  h2 { font-size: clamp(30px, 5vw, 40px); margin-top: 56px; }
+  p { max-width: 68ch; }
+  .lede { color: var(--muted); }
+  .note { color: var(--muted); font-size: 14px; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .scroll { overflow-x: auto; margin-top: 14px; }
+  .builds { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+  .builds div { background: var(--stone); border-left: 4px solid var(--gold); padding: 10px 12px; min-width: 0; }
+  .builds b { color: var(--gold); font-weight: 600; }
+  .builds span { display: block; font-size: 14px; color: var(--muted); }
+  .bench { position: relative; margin-top: 14px; border: 4px solid var(--stone-2); background: #000; }
+  .bench canvas { width: 100%; height: auto; cursor: pointer; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  .seg { display: inline-flex; border: 3px solid var(--ink); box-shadow: 3px 3px 0 #000; }
+  .seg button { border: 0; box-shadow: none; border-right: 3px solid var(--ink); }
+  .seg button:last-child { border-right: 0; }
+  button {
+    font: inherit; font-size: 15px; color: var(--ink); background: var(--parchment); border: 3px solid var(--ink);
+    padding: 4px 12px; cursor: pointer; box-shadow: 3px 3px 0 #000;
+  }
+  button[aria-pressed="true"] { background: var(--gold); }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .label { font-size: 13px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-right: 2px; }
+  .status { font-family: var(--mono); font-size: 21px; color: var(--gold); margin-top: 10px; min-height: 1.2em; }
+  .overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .banner {
+    position: absolute; left: 50%; top: 16%; transform: translateX(-50%); white-space: nowrap;
+    font-family: var(--display); font-size: clamp(30px, 7vw, 64px); color: var(--gold); text-shadow: 3px 3px 0 #000, -1px -1px 0 #000;
+    animation: pop 2.2s steps(6) forwards;
+  }
+  .banner.red { color: var(--blood); }
+  @keyframes pop { 0% { opacity: 0; transform: translateX(-50%) scale(.5); } 12% { opacity: 1; transform: translateX(-50%) scale(1.05); } 20% { transform: translateX(-50%) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; } }
+  .bubble {
+    position: absolute; transform: translate(-50%, -100%); max-width: min(46%, 300px); width: max-content;
+    padding: 4px 8px; background: var(--parchment); color: var(--ink); border: 3px solid var(--ink);
+    font-family: var(--mono); font-size: clamp(15px, 2.2vw, 20px); line-height: 1.05;
+  }
+  .bubble .k { font-family: var(--ui); font-weight: 600; font-size: 12px; letter-spacing: .05em; display: block; }
+  .k.MINOR { color: #5f6b75; } .k.MAJOR { color: #b8661a; } .k.FATAL { color: #b0302a; }
+  .k.REBUT { color: #2f6aa8; } .k.CONCEDE { color: #2f7d50; } .k.STANDING { color: #b0302a; } .k.LOOT { color: #8a6a10; }
+  .hp { position: absolute; top: 8px; width: 34%; font-size: clamp(11px, 1.8vw, 14px); }
+  .hp.l { left: 10px; } .hp.r { right: 10px; text-align: right; }
+  .hp b { font-family: var(--mono); font-size: clamp(18px, 2.8vw, 24px); color: var(--parchment); text-shadow: 2px 2px 0 #000; font-weight: 400; }
+  .hp span { color: var(--parchment); text-shadow: 1px 1px 0 #000; display: block; }
+  .hp .bar { height: 10px; background: #3a1714; border: 2px solid #000; margin-top: 3px; }
+  .hp .bar i { display: block; height: 100%; background: var(--heal); transition: width .25s steps(4); }
+  .hp.r .bar i { margin-left: auto; }
+  .tip {
+    position: fixed; z-index: 20; width: min(320px, calc(100vw - 32px)); padding: 10px 12px; pointer-events: none;
+    background: var(--parchment); color: var(--ink); border: 3px solid var(--ink); font-size: 14px; box-shadow: 4px 4px 0 #000;
+  }
+  .tip h4 { margin: 0 0 4px; font-family: var(--display); font-weight: 400; font-size: 26px; color: #a3322a; }
+  .tip ul { margin: 4px 0 0; padding-left: 18px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: var(--muted); margin-top: 10px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+  ol.ask { padding-left: 20px; max-width: 68ch; }
+  ol.ask li { margin-bottom: 6px; }
+  code { font-family: var(--mono); font-size: 19px; }
+  .timeline { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+  .timeline input { flex: 1 1 240px; min-width: 0; accent-color: var(--gold); }
+  .clock { font-family: var(--mono); font-size: 21px; color: var(--parchment); font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { .banner { animation-duration: .01s; } }
+</style>
+
+<main>
+  <h1>Arena Asset Lab</h1>
+  <p class="lede">Test benches for the arena game, before the real build. Everything here is drawn in code from
+    pixel rectangles in the Claude Code mascot's style: flat colour, no outlines, chunky square eyes, four little legs.
+    Colours, builds and gear are swapped at run time.</p>
+
+  <h2>The four fighters</h2>
+  <p class="note">My own read on each model, kept to one silhouette change and one or two props each so they stay
+    recognisable at 20 pixels wide in the colosseum.</p>
+  <div class="builds">
+    <div><b>Haiku · the scout</b><span>Smallest and quickest. A paper-white scarf and a sprout on its head: short
+      poems, fast feet.</span></div>
+    <div><b>Sonnet · the knight</b><span>The mascot as it is, in a steel kettle helm. Balanced and dependable.</span></div>
+    <div><b>Opus · the sage</b><span>Tall and hooded, eyes that glow. Slow, deliberate, carries a staff until it loots
+      a weapon.</span></div>
+    <div><b>Fable · the legend</b><span>The biggest frame, a laurel crown, a red cape and gold pauldrons.</span></div>
+  </div>
+  <div class="scroll"><canvas id="sheet" aria-label="Animation sheet: four fighters, twelve animations each"></canvas></div>
+
+  <h2>Fifteen colours</h2>
+  <p class="note">Body colour is the agent's reasoning mode, so the two fighters in a duel almost always differ.</p>
+  <div class="scroll"><canvas id="strip" aria-label="One fighter in each of the fifteen reasoning-mode colours"></canvas></div>
+
+  <h2>The crowd and the judges</h2>
+  <p class="note">Every match has its own judge, a separate sub-agent. Here a judge is a spectator in a white toga who
+    stands up when the verdict file lands and gives the thumb. Down marks the loser and up marks the winner.</p>
+  <div class="scroll"><canvas id="people" aria-label="Crowd, judge and thumb badges"></canvas></div>
+
+  <h2>The colosseum</h2>
+  <p class="note">This plays back a real run's files. Fighters loot while their first solution is being written and
+    equip when it lands. A round opens only after every fight in the previous one is over. Each attack, shield, heal,
+    judge and death happens when its file was written, and the pace of the waves comes from the files' times.
+    <b>Drag the timeline</b> to jump anywhere, as if you came back later. <b>Click a fight or a body</b> to open that
+    match below. <b>Hover anyone</b> for details.</p>
+  <div class="controls">
+    <span class="label">Run</span>
+    <span class="seg" id="runSeg"></span>
+    <span class="label">Map</span>
+    <span class="seg" id="mapSeg"></span>
+  </div>
+  <div class="controls">
+    <span class="label">Model</span>
+    <span class="seg" id="buildSeg"></span>
+    <span class="label">Speed</span>
+    <span class="seg" id="speedSeg"></span>
+  </div>
+  <div class="bench" id="arenaBench">
+    <canvas id="arena" aria-label="Colosseum overview"></canvas>
+    <div class="overlay" id="arenaOverlay"></div>
+  </div>
+  <div class="timeline">
+    <label for="scrub" class="label">Timeline</label>
+    <input type="range" id="scrub" min="0" max="1000" step="50" value="0">
+    <span class="clock" id="clock">0:00:00</span>
+    <button id="toEnd">Skip to the end</button>
+  </div>
+  <div class="status" id="arenaStatus"></div>
+  <div class="legend">
+    <span><i style="background:#cfd6dc"></i>MINOR hit</span>
+    <span><i style="background:#f2a33a"></i>MAJOR hit</span>
+    <span><i style="background:#e0483c"></i>FATAL hit</span>
+    <span><i style="background:#fff3b0"></i>shield (rebut)</span>
+    <span><i style="background:#6fd08c"></i>heal (concede and fix)</span>
+    <span><i style="background:#e8c14a"></i>loot pips: fixes taken off the bodies</span>
+  </div>
+
+  <h2>The fight view</h2>
+  <p class="note">The full replay of one match from the run above: <code id="duelId"></code>. Hits land in the attack
+    phase. In the defend phase the defender shields the ones it rebutted and heals the ones it conceded and fixed.
+    The judge then brings back any attack still standing and gives the thumb. Hover the body at the end for the cause
+    of death.</p>
+  <div class="bench" id="duelBench">
+    <canvas id="duel" aria-label="Close-up fight"></canvas>
+    <div class="overlay" id="duelOverlay">
+      <div class="hp l" id="hpA"><b></b><span></span><div class="bar"><i></i></div></div>
+      <div class="hp r" id="hpB"><b></b><span></span><div class="bar"><i></i></div></div>
+    </div>
+  </div>
+  <div class="status" id="duelStatus"></div>
+  <div class="controls">
+    <button id="duelReplay">Replay</button>
+    <span class="label">Speed</span>
+    <span class="seg" id="duelSpeed"></span>
+  </div>
+
+  <h2>What would help next</h2>
+  <ol class="ask">
+    <li>Which map reads better: the top-down oval or the side panorama?</li>
+    <li>Are the judges and thumbs clear enough now?</li>
+    <li>References: screenshots of games or sprites you like, a palette (Lospec), or Aseprite / PNG sprite sheets.
+      Real sheets drop straight into this renderer in place of the code-drawn ones.</li>
+  </ol>
+  <div class="tip" id="tip" hidden></div>
+</main>
+
+<script>
+/*RUNS*/
+</script>
+<script>
+(() => {
+'use strict';
+// ================================================================ palette
+const C = {
+  ink: '#1b1b1f', white: '#f4ecd8', steel: '#cfd6dc', steelD: '#7a858f', gold: '#e8c14a', goldD: '#a8842a',
+  red: '#c2453d', redD: '#7e2a24', wood: '#8a5a33', woodD: '#5a3a22', leaf: '#7cc95e', leafD: '#3f7f3a',
+  hood: '#3b3150', hoodD: '#272036', glow: '#8fe3ff', heal: '#6fd08c', spark: '#fff3b0', flame: '#f2a33a',
+  flameC: '#f7e08a', dust: '#e9d3a6',
+};
+const COLOURS = {
+  'first-principles': '#d97757', 'inversion': '#c2453d', 'analogy': '#e0a93b', 'adversarial': '#8e3b46',
+  'constraint-first': '#5b7fbf', 'worked-example': '#4fa07a', 'socratic': '#9b6bc7', 'contrarian': '#3fa7b5',
+  'systems-thinking': '#6e8b3d', 'decomposition': '#d46fa0', 'working-backwards': '#a0785a', 'probabilistic': '#7a8ca3',
+  'dialectical': '#e3c27a', 'evidence-first': '#3e5c8a', 'expert-panel': '#b9b4a8',
+};
+const CLIST = Object.values(COLOURS);
+const TIERC = { MINOR: '#cfd6dc', MAJOR: '#f2a33a', FATAL: '#e0483c' };
+const DMG = { MINOR: 8, MAJOR: 16, FATAL: 26 };
+const shadeCache = {};
+function shade(hex, f) {
+  const k = hex + f; if (shadeCache[k]) return shadeCache[k];
+  const n = parseInt(hex.slice(1), 16);
+  const c = [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.max(0, Math.min(255, Math.round(v * f))));
+  return (shadeCache[k] = '#' + c.map(v => v.toString(16).padStart(2, '0')).join(''));
+}
+function hash(x, y, s = 0) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(s, 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+const rand = (a, b) => a + Math.random() * (b - a);
+const pickOf = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+// ================================================================ fighters
+// w,h: body; legs: leg columns; eyes: eye columns; eyeY / armY: rows from the top of the body.
+const BUILDS = {
+  haiku:  { name: 'Haiku',  w: 8,  h: 5, legH: 2, legs: [0, 2, 5, 7],  eyes: [2, 5], eyeY: 1, armY: 2, top: 3 },
+  sonnet: { name: 'Sonnet', w: 10, h: 6, legH: 2, legs: [1, 3, 6, 8],  eyes: [2, 7], eyeY: 1, armY: 3, top: 2 },
+  opus:   { name: 'Opus',   w: 12, h: 7, legH: 3, legs: [1, 4, 7, 10], eyes: [3, 8], eyeY: 2, armY: 4, top: 2, eyesMode: 'glow' },
+  fable:  { name: 'Fable',  w: 12, h: 8, legH: 3, legs: [1, 4, 7, 10], eyes: [3, 8], eyeY: 2, armY: 4, top: 3 },
+};
+const BUILD_IDS = Object.keys(BUILDS);
+const heightOf = F => BUILDS[F.build].h + BUILDS[F.build].legH;
+
+const ANIMS = {
+  idle: { frames: 2, ms: 480 }, walk: { frames: 4, ms: 130 }, charge: { frames: 4, ms: 75 },
+  swing: { frames: 3, ms: 120, once: true }, throw: { frames: 2, ms: 150, once: true },
+  hurt: { frames: 2, ms: 130, once: true }, block: { frames: 2, ms: 200, once: true },
+  heal: { frames: 4, ms: 150 }, think: { frames: 4, ms: 320 }, loot: { frames: 2, ms: 280 },
+  victory: { frames: 2, ms: 220 }, dead: { frames: 1, ms: 1000 },
+};
+
+// Accessories. pre: drawn behind the body; post: in front. G is the body geometry.
+const ACC = {
+  haiku: {
+    pre(R, B, o, G, t) { for (let i = 0; i < 4; i++) R(G.x0 - 1 - i, G.y0 + 3 + Math.round(Math.sin(t / 90 + i * 1.4) * .7 + (i > 1 ? .5 : 0)), 1, 1, C.white); },
+    post(R, B, o, G, t) {
+      R(G.x0, G.y0 + 3, B.w, 1, C.white);
+      const cx = G.x0 + (B.w >> 1) + o.lean, s = Math.round(Math.sin(t / 260));
+      R(cx - 1, G.y0 - 2, 1, 2, C.leafD); R(cx + s, G.y0 - 3, 2, 1, C.leaf); R(cx - 3 + s, G.y0 - 2, 2, 1, C.leaf);
+    },
+    drop(R, x) { R(x, -1, 1, 1, C.leafD); R(x + 1, -2, 2, 1, C.leaf); R(x + 3, -1, 3, 1, C.white); },
+  },
+  sonnet: {
+    post(R, B, o, G) {
+      const L = o.lean;
+      R(G.x0 + 1 + L, G.y0 - 3, B.w - 2, 1, C.steel); R(G.x0 + L, G.y0 - 2, B.w, 2, C.steel);
+      R(G.x0 - 1 + L, G.y0, B.w + 2, 1, C.steelD); R(G.x0 + 2 + L, G.y0 - 2, 1, 1, C.white);
+    },
+    drop(R, x) { R(x, -2, 6, 2, C.steel); R(x - 1, -1, 8, 1, C.steelD); },
+  },
+  opus: {
+    pre(R, B, o, G) { R(G.x0 - 1, G.y0 + 3, 1, B.h - 2, C.hoodD); },
+    post(R, B, o, G) {
+      const L = o.lean, cx = G.x0 + (B.w >> 1) + L;
+      R(G.x0 - 1 + L, G.y0 - 1, B.w + 2, 2, C.hood); R(G.x0 + 1 + L, G.y0 - 2, B.w - 2, 1, C.hood); R(cx - 1, G.y0 - 3, 2, 1, C.hood);
+      R(G.x0 - 1 + L, G.y0 + 1, 1, 3, C.hood); R(G.x0 + B.w + L, G.y0 + 1, 1, 3, C.hood);
+      R(G.x0, G.legTop, B.w, 1, C.hoodD); R(G.x0 + (B.w >> 1) - 1, G.legTop - 2, 2, 1, C.gold);
+    },
+    staff(R, B, o, G, t) { const x = G.hx; R(x, G.y0 - 5, 1, B.h + B.legH + 5, C.wood); R(x - 1, G.y0 - 7, 2, 2, (Math.floor(t / 300) % 2) ? C.glow : '#c9f3ff'); },
+    drop(R, x) { R(x, -1, 9, 1, C.wood); R(x + 9, -2, 2, 2, C.glow); },
+  },
+  fable: {
+    pre(R, B, o, G, t) {
+      R(G.x0 - 2, G.y0 + 2, 2, B.h + B.legH - 3, C.red);
+      R(G.x0 - 3 - (Math.floor(t / 160) % 2), G.y0 + B.h + B.legH - 3, 1, 2, C.redD);
+    },
+    post(R, B, o, G) {
+      const L = o.lean, cx = G.x0 + (B.w >> 1) + L;
+      R(G.x0 + 2 + L, G.y0 - 1, B.w - 4, 1, C.gold); R(G.x0 + 2 + L, G.y0 - 2, 1, 1, C.gold); R(G.x0 + B.w - 3 + L, G.y0 - 2, 1, 1, C.gold);
+      R(cx - 1, G.y0 - 3, 2, 2, C.gold); R(cx - 1, G.y0 - 1, 2, 1, C.red);
+      R(G.x0 - 2, G.ay - 1, 3, 2, C.gold); R(G.x0 + B.w - 1, G.ay - 1, 3, 2, C.goldD);
+    },
+    drop(R, x) { R(x, -1, 6, 1, C.gold); R(x + 1, -2, 1, 1, C.gold); R(x + 4, -2, 1, 1, C.gold); R(x - 6, -1, 5, 1, C.red); },
+  },
+};
+
+// ---------------------------------------------------------------- weapons, drawn pointing right from the grip
+const WCOL = { H: C.woodD, W: C.wood, Y: C.gold, M: C.steel, D: C.steelD, F: C.flame, P: C.flameC, K: C.ink };
+const WEAPONS = {
+  dagger:        { tier: 'MINOR', kind: 'melee', grip: 1, g: ['.Y...', 'HYMMM', '.Y...'] },
+  'throwing knife': { tier: 'MINOR', kind: 'throw', grip: 0, g: ['HMMM'] },
+  sword:         { tier: 'MAJOR', kind: 'melee', grip: 1, g: ['..Y......', 'HHYMMMMMM', '..Y......'] },
+  axe:           { tier: 'MAJOR', kind: 'melee', grip: 1, g: ['.....MM.', 'WWWWWDMM', '.....MM.'] },
+  mace:          { tier: 'MAJOR', kind: 'melee', grip: 1, g: ['.....DMD', 'HHHHHMMM', '.....DMD'] },
+  javelin:       { tier: 'MAJOR', kind: 'throw', grip: 1, g: ['.........M.', 'WWWWWWWWWMM', '.........M.'] },
+  warhammer:     { tier: 'FATAL', kind: 'melee', grip: 2, g: ['......DDDD', '......MMMM', 'WWWWWWMMMM', '......MMMM', '......DDDD'] },
+  greatsword:    { tier: 'FATAL', kind: 'melee', grip: 1, g: ['...Y..........', 'HHHYMMMMMMMMMM', 'HHHYDDDDDDDDDD', '...Y..........'] },
+  flail:         { tier: 'FATAL', kind: 'melee', grip: 1, g: ['.........DMD', 'HHHHD.D.DMMM', '.........DMD'] },
+  fireball:      { tier: 'FATAL', kind: 'throw', grip: 1, g: ['...FF.', 'FFPPPF', '...FF.'] },
+};
+const byTier = t => Object.entries(WEAPONS).filter(([, w]) => w.tier === t);
+function pickWeapon(tier) { const [name, w] = pickOf(byTier(tier)); return Object.assign({ name }, w); }
+const STARTERS = ['dagger', 'sword', 'axe', 'mace'];
+
+function paintWeapon(R, wp, hx, hy, ang) {
+  const g = wp.g;
+  for (let py = 0; py < g.length; py++) for (let px = 0; px < g[py].length; px++) {
+    const ch = g[py][px]; if (ch === '.') continue;
+    const gy = py - wp.grip; let X, Y;
+    if (ang === 'fwd') { X = px; Y = gy; }
+    else if (ang === 'up') { X = gy; Y = -px; }
+    else if (ang === 'diag') { X = px; Y = gy - px; }
+    else if (ang === 'down') { X = px; Y = gy + px; }
+    else { X = gy - (px >> 1); Y = -px; } // back, over the shoulder
+    R(hx + X, hy + Y, 1, 1, WCOL[ch]);
+  }
+}
+
+// ---------------------------------------------------------------- the painter
+function eyes(R, mode, ex, ey, flash) {
+  const k = flash ? C.ink : C.ink;
+  switch (mode) {
+    case 'up': R(ex, ey - 1, 1, 2, k); break;
+    case 'glow': R(ex, ey, 1, 2, C.glow); break;
+    case 'happy': R(ex - 1, ey + 1, 1, 1, k); R(ex, ey, 1, 1, k); R(ex + 1, ey + 1, 1, 1, k); break;
+    case 'squintL': R(ex - 1, ey, 1, 1, k); R(ex, ey + 1, 1, 1, k); R(ex - 1, ey + 2, 1, 1, k); break;
+    case 'squintR': R(ex + 1, ey, 1, 1, k); R(ex, ey + 1, 1, 1, k); R(ex + 1, ey + 2, 1, 1, k); break;
+    case 'x': R(ex - 1, ey, 1, 1, k); R(ex + 1, ey, 1, 1, k); R(ex, ey + 1, 1, 1, k); R(ex - 1, ey + 2, 1, 1, k); R(ex + 1, ey + 2, 1, 1, k); break;
+    default: R(ex, ey, 1, 2, k);
+  }
+}
+
+function paintBody(R, F, B, o, t, drawAcc = true) {
+  const col = F.color, main = o.flash || col, sh = o.flash || shade(col, .7);
+  const x0 = -(B.w >> 1), legTop = -B.legH + o.bob, y0 = legTop - B.h, ay = y0 + B.armY;
+  const G = { x0, y0, legTop, ay, hx: x0 + B.w + 1 + o.armF, hy: ay + o.armFy };
+  const acc = ACC[F.build];
+  if (drawAcc && acc.pre) acc.pre(R, B, o, G, t);
+  B.legs.forEach((c, i) => { const lift = o.lift ? o.lift[i] : 0; R(x0 + c, legTop, 1, Math.max(1, -legTop - lift), sh); });
+  const half = B.h >> 1;
+  R(x0 + o.lean, y0, B.w, half, main);
+  R(x0, y0 + half, B.w, B.h - half, main);
+  R(x0, y0 + B.h - 1, B.w, 1, sh);
+  R(x0 - 1 - o.armB, ay, 1 + o.armB, 2, main);
+  R(x0 + B.w, ay + o.armFy, 1 + o.armF, 2, main);
+  const mode = o.eyes || B.eyesMode || 'n';
+  B.eyes.forEach((e, i) => {
+    const m = mode === 'squint' ? (i ? 'squintR' : 'squintL') : mode;
+    eyes(R, m, x0 + e + o.look + (B.eyeY < half ? o.lean : 0), y0 + B.eyeY, o.flash);
+  });
+  if (drawAcc && acc.post) acc.post(R, B, o, G, t);
+  return G;
+}
+
+function paintFighter(ctx, F, x, y, S, anim, t) {
+  const B = BUILDS[F.build], A = ANIMS[anim] || ANIMS.idle;
+  const f = A.once ? Math.min(A.frames - 1, Math.floor(t / A.ms)) : Math.floor(t / A.ms) % A.frames;
+  ctx.save();
+  ctx.translate(Math.round(x * S), Math.round(y * S));
+  ctx.scale(S * (F.dir || 1), S);
+  const R = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(a, b, w, h); };
+  const x0 = -(B.w >> 1);
+  R(x0 - 1, 0, B.w + 2, 1, 'rgba(0,0,0,.28)');
+  if (anim === 'dead') {
+    ctx.save(); ctx.scale(1, -1); ctx.translate(0, B.h + B.legH);
+    paintBody(R, Object.assign({}, F, { color: shade(F.color, .85) }), B, { bob: 0, lean: 0, look: 0, armF: 0, armFy: 0, armB: 0, eyes: 'x', lift: null }, t, false);
+    ctx.restore();
+    ACC[F.build].drop(R, x0 + B.w + 2);
+    ctx.restore();
+    return;
+  }
+  const o = { bob: 0, lean: 0, look: 0, armF: 0, armFy: 0, armB: 0, eyes: null, lift: null, flash: null };
+  let w = F.weapon ? WEAPONS[F.weapon] : null, wa = 'up', extra = null, dx = 0, air = 0;
+  switch (anim) {
+    case 'idle': o.bob = f; break;
+    case 'walk': o.look = 1; o.lift = f === 1 ? [1, 0, 1, 0] : f === 3 ? [0, 1, 0, 1] : null; break;
+    case 'charge': o.look = 1; o.lean = 1; o.lift = f % 2 ? [1, 0, 1, 0] : [0, 1, 0, 1]; wa = 'fwd'; extra = 'dust'; break;
+    case 'swing':
+      w = F.atkW || w; o.look = 1;
+      if (f === 0) { o.lean = -1; dx = -1; wa = 'back'; }
+      else if (f === 1) { o.lean = 1; dx = 2; o.armF = 1; wa = 'fwd'; extra = 'swoosh'; }
+      else { o.lean = 1; dx = 1; wa = 'down'; }
+      break;
+    case 'throw': w = F.atkW || w; o.look = 1; if (f === 0) { dx = -1; wa = 'back'; } else { o.armF = 2; w = null; } break;
+    case 'hurt': o.eyes = 'squint'; dx = f === 0 ? -2 : -1; if (f === 0) o.flash = '#ffffff'; break;
+    case 'block': o.look = 1; extra = 'shield'; o.bob = f === 0 ? 1 : 0; w = null; break;
+    case 'heal': o.eyes = 'happy'; o.bob = f % 2; extra = 'heal'; if (f % 2) o.flash = shade(F.color, 1.22); break;
+    case 'think': o.eyes = 'up'; o.bob = (f >> 1) % 2; extra = 'think'; break;
+    case 'loot': o.bob = 1; o.armF = 1; o.armFy = 1; o.eyes = f ? 'happy' : null; extra = 'glint'; w = null; break;
+    case 'victory': o.eyes = 'happy'; air = f ? -3 : 0; o.lift = f ? [1, 1, 1, 1] : null; break;
+  }
+  ctx.translate(dx, air);
+  const G = paintBody(R, F, B, o, t);
+  if (w) paintWeapon(R, w, G.hx, G.hy, wa);
+  else if (F.build === 'opus' && !F.weapon && !['throw', 'block', 'loot'].includes(anim)) ACC.opus.staff(R, B, o, G, t);
+  if (extra === 'dust') { R(x0 - 3 - f, -1, 1, 1, C.dust); R(x0 - 5 - (f % 2), -2, 1, 1, C.dust); }
+  else if (extra === 'swoosh') { for (let i = 0; i < 5; i++) R(G.hx + 4 + i, G.y0 - 3 + i * 2, 1, 2, 'rgba(255,255,255,.75)'); }
+  else if (extra === 'shield') {
+    const sx = x0 + B.w + 1, sy = G.y0 - 1;
+    R(sx, sy, 4, B.h + 2, C.gold); R(sx + 1, sy + 1, 2, B.h, shade(F.color, .55)); R(sx + 1, sy + (B.h >> 1), 2, 2, C.gold);
+    if (f === 1) { R(sx + 5, sy + 1, 1, 1, C.spark); R(sx + 6, sy + 3, 2, 1, C.spark); R(sx + 5, sy + 5, 1, 1, C.spark); }
+  } else if (extra === 'heal') {
+    [0, B.w - 1, B.w >> 1].forEach((px, k) => {
+      const py = G.y0 - (Math.floor(t / 9 + k * 6) % 14);
+      R(x0 + px, py - 1, 1, 3, C.heal); R(x0 + px - 1, py, 3, 1, C.heal);
+    });
+  } else if (extra === 'think') {
+    for (let i = 0; i < f; i++) R(x0 + B.w - 1 + i * 2, G.y0 - 4 - i - B.top + 2, 1, 1, C.white);
+  } else if (extra === 'glint') {
+    const gy = G.y0 - 5 - f;
+    R(0, gy - 1, 1, 3, C.spark); R(-1, gy, 3, 1, C.spark);
+  }
+  ctx.restore();
+}
+
+// ================================================================ engine
+class Engine {
+  constructor(canvas, W, H, S) {
+    this.cv = canvas; this.W = W; this.H = H; this.S = S;
+    canvas.width = W * S; canvas.height = H * S;
+    this.ctx = canvas.getContext('2d'); this.ctx.imageSmoothingEnabled = false;
+    this.speed = 1; this.gen = 0; this.visible = true; this.last = 0;
+    new IntersectionObserver(es => { this.visible = es[0].isIntersecting; }).observe(canvas);
+    this.clear();
+    requestAnimationFrame(ts => this.frame(ts));
+  }
+  clear() { this.gen++; this.time = 0; this.timers = []; this.fighters = []; this.proj = []; this.parts = []; this.shake = 0; }
+  wait(ms) { const gen = this.gen; return new Promise(res => this.timers.push({ at: this.time + ms, res, gen })); }
+  setAnim(f, a, force, ms) { if (f.anim !== a || force) { f.anim = a; f.animT = 0; } f.animUntil = ms ? this.time + ms : 0; }
+  moveTo(f, x, y, speed = 40, anim = 'walk', face = true) {
+    return new Promise(res => { f.move = { x, y, speed, anim, res, face }; this.setAnim(f, anim); });
+  }
+  throwAt(from, to, wp) {
+    return new Promise(res => this.proj.push({ x: from.x + from.dir * 6, y: from.y - heightOf(from) + 2, tx: to.x, ty: to.y - heightOf(to) / 2, wp, t: 0, res, dir: from.dir, speed: wp.name === 'fireball' ? 110 : 150 }));
+  }
+  burst(x, y, color, n = 8, spd = 40, life = 500, grav = 60) {
+    for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = rand(.3, 1) * spd; this.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - spd * .4, life, max: life, color, grav }); }
+  }
+  step(dt) {
+    this.time += dt;
+    this.shake = Math.max(0, this.shake - dt);
+    const due = this.timers.filter(t => t.at <= this.time);
+    this.timers = this.timers.filter(t => t.at > this.time);
+    due.forEach(t => t.gen === this.gen && t.res());
+    for (const f of this.fighters) {
+      f.animT += dt;
+      if (f.animUntil && this.time >= f.animUntil) this.setAnim(f, 'idle');
+      const m = f.move;
+      if (m) {
+        const dx = m.x - f.x, dy = m.y - f.y, dist = Math.hypot(dx, dy), s = m.speed * dt / 1000;
+        if (m.face && Math.abs(dx) > .5) f.dir = dx > 0 ? 1 : -1;
+        if (dist <= s) { f.x = m.x; f.y = m.y; f.move = null; this.setAnim(f, 'idle'); m.res(); }
+        else { f.x += dx / dist * s; f.y += dy / dist * s; }
+      }
+    }
+    for (const p of this.proj) {
+      p.t += dt;
+      const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy), s = p.speed * dt / 1000;
+      if (d <= s) { p.done = true; p.res(); } else { p.x += dx / d * s; p.y += dy / d * s - Math.sin(p.t / 200) * 0; }
+    }
+    this.proj = this.proj.filter(p => !p.done);
+    for (const p of this.parts) { p.life -= dt; p.x += p.vx * dt / 1000; p.y += p.vy * dt / 1000; p.vy += p.grav * dt / 1000; }
+    this.parts = this.parts.filter(p => p.life > 0);
+    if (this.tick) this.tick(dt);
+  }
+  frame(ts) {
+    const dt = Math.min(50, ts - (this.last || ts)); this.last = ts;
+    if (this.visible) { this.step(dt * this.speed); this.draw(); }
+    requestAnimationFrame(t => this.frame(t));
+  }
+  R(x, y, w, h, c) { const S = this.S; this.ctx.fillStyle = c; this.ctx.fillRect(Math.round(x * S), Math.round(y * S), w * S, h * S); }
+  draw() {
+    const g = this.ctx, S = this.S;
+    g.save();
+    if (this.shake > 0) g.translate(Math.round(rand(-1, 1)) * S, Math.round(rand(-1, 1)) * S);
+    g.drawImage(this.background(), 0, 0, this.W * S, this.H * S);
+    if (this.drawUnder) this.drawUnder();
+    const fs = this.fighters.slice().sort((a, b) => (a.anim === 'dead' ? -1 : 0) - (b.anim === 'dead' ? -1 : 0) || a.y - b.y);
+    for (const f of fs) { if (f.ghost) g.globalAlpha = .55; paintFighter(g, f, f.x, f.y, S, f.anim, f.animT); g.globalAlpha = 1; }
+    if (this.drawOver) this.drawOver();
+    for (const p of this.proj) {
+      const angs = ['up', 'diag', 'fwd', 'down'];
+      const spin = p.wp.name === 'throwing knife' ? angs[Math.floor(p.t / 60) % 4] : 'fwd';
+      g.save(); g.translate(Math.round(p.x * S), Math.round(p.y * S)); g.scale(S * p.dir, S);
+      const len = p.wp.g[0].length;
+      paintWeapon((a, b, w, h, c) => { g.fillStyle = c; g.fillRect(a, b, w, h); }, p.wp, -(len >> 1), 0, spin);
+      g.restore();
+      if (p.wp.name === 'fireball' && Math.random() < .5) this.parts.push({ x: p.x - p.dir * 3, y: p.y + rand(-1, 1), vx: -p.dir * 10, vy: -8, life: 250, max: 250, color: C.flame, grav: 0 });
+    }
+    for (const p of this.parts) this.R(p.x, p.y, 1, 1, p.color);
+    g.restore();
+  }
+}
+
+// ================================================================ backgrounds
+function crowdColour(i) { return ['#c2453d', '#5b7fbf', '#e0a93b', '#4fa07a', '#9b6bc7', '#f4ecd8', '#3fa7b5', '#d46fa0', '#a0785a'][i % 9]; }
+const SKIN = ['#f1c9a0', '#d9a577', '#b07a4f', '#8a5a3a', '#f3d5b5'];
+const HAIR = ['#2b1d14', '#5a3a22', '#8a5a33', '#c9a04a', '#1b1b1f', '#a33a2a', '#d8d0c0'];
+
+function ovalBackground(W, H) {
+  const cx = W / 2, cy = H / 2 + 12, rx = W * .37, ry = H * .32;
+  const frames = [0, 1].map(fr => {
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'); const img = g.createImageData(W, H); const d = img.data;
+    const put = (x, y, hex) => { const i = (y * W + x) * 4, n = parseInt(hex.slice(1), 16); d[i] = n >> 16; d[i + 1] = (n >> 8) & 255; d[i + 2] = n & 255; d[i + 3] = 255; };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const nx = (x - cx) / rx, ny = (y - cy) / ry, e = Math.sqrt(nx * nx + ny * ny), n = hash(x, y);
+      let c;
+      if (e < 1) {
+        c = n < .06 ? '#b98f57' : n > .97 ? '#ecd09a' : '#d8b27a';
+        if (Math.abs(((e * 34) % 1) - .5) < .04 && n < .55) c = '#cba26a';
+      } else if (e < 1.05) c = e < 1.012 ? '#6b5d4f' : (n < .5 ? '#4a3f37' : '#463b33');
+      else {
+        const k = (e - 1.05) / .07, tier = Math.floor(k), within = k - tier;
+        c = within < .2 ? '#857360' : (tier % 2 ? '#5d5047' : '#54483f');
+        if (y < cy - ry * 1.05) c = within < .2 ? '#93806b' : (tier % 2 ? '#665850' : '#5d5047');
+      }
+      put(x, y, c);
+    }
+    g.putImageData(img, 0, 0);
+    // crowd
+    for (let tier = 0; tier < 8; tier++) {
+      const e = 1.05 + .07 * (tier + .62), steps = Math.floor(2 * Math.PI * Math.max(rx, ry) * e / 4.4);
+      for (let s = 0; s < steps; s++) {
+        const a = s / steps * Math.PI * 2, hx = Math.round(cx + rx * e * Math.cos(a)) - 1, hy = Math.round(cy + ry * e * Math.sin(a)) - 2;
+        if (hx < 1 || hy < 2 || hx >= W - 4 || hy >= H - 4) continue;
+        if (Math.abs(Math.sin(a)) < .12 && tier < 3) continue; // gates
+        if (hash(s, tier, 7) < .14) continue;
+        const up = fr && hash(s, tier, 3) < .3 ? 1 : 0, skin = SKIN[Math.floor(hash(s, tier, 2) * 5)];
+        g.fillStyle = crowdColour(Math.floor(hash(s, tier, 1) * 9)); g.fillRect(hx, hy + 2 - up, 3, 2);
+        g.fillStyle = skin; g.fillRect(hx, hy + 1 - up, 3, 1);
+        g.fillStyle = HAIR[Math.floor(hash(s, tier, 4) * HAIR.length)]; g.fillRect(hx, hy - up, 3, 1);
+        if (up) { g.fillStyle = skin; g.fillRect(hx - 1, hy - 1, 1, 2); g.fillRect(hx + 3, hy - 1, 1, 2); }
+      }
+    }
+    // gates
+    for (const sgn of [-1, 1]) {
+      const gx = Math.round(cx + sgn * rx * 1.02) - 4, gy = Math.round(cy) - 9;
+      g.fillStyle = '#6b5d4f'; g.fillRect(gx - 2, gy - 2, 12, 14);
+      g.fillStyle = '#120e10'; g.fillRect(gx, gy, 8, 12);
+      g.fillStyle = '#3a3036'; for (let i = 1; i < 8; i += 2) g.fillRect(gx + i, gy, 1, 12);
+    }
+    // emperor's box
+    const bx = Math.round(cx) - 18, by = Math.round(cy - ry * 1.3) - 6;
+    g.fillStyle = '#e8c14a'; g.fillRect(bx - 1, by - 1, 38, 14);
+    g.fillStyle = '#7e2a24'; g.fillRect(bx, by, 36, 12);
+    for (let i = 0; i < 36; i += 6) { g.fillStyle = '#c2453d'; g.fillRect(bx + i, by, 3, 4); }
+    g.fillStyle = '#f4ecd8'; g.fillRect(bx + 16, by + 6, 4, 4); g.fillStyle = '#e8c14a'; g.fillRect(bx + 16, by + 4, 4, 1);
+    return cv;
+  });
+  return {
+    frames, cx, cy, rx, ry,
+    inside(x, y, m = .86) { const nx = (x - cx) / rx, ny = (y - cy) / ry; return nx * nx + ny * ny < m * m; },
+    random() { for (;;) { const x = rand(cx - rx, cx + rx), y = rand(cy - ry, cy + ry); if (this.inside(x, y, .8)) return { x, y }; } },
+    gates() { return [{ x: cx - rx + 6, y: cy }, { x: cx + rx - 6, y: cy }]; },
+    stand(x, y) { const a = Math.atan2((y - cy) / ry, (x - cx) / rx); return { x: cx + rx * 1.14 * Math.cos(a), y: cy + ry * 1.14 * Math.sin(a) }; },
+  };
+}
+
+function panoramaBackground(W, H, o) {
+  const floor = o.floor, tierH = o.tierH, nT = o.tiers, top = o.top, archW = o.archW;
+  const frames = [0, 1].map(fr => {
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d');
+    const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+    const sky = ['#2a2140', '#3d2b4e', '#5a3a58', '#80505e', '#a86a62'];
+    for (let y = 0; y < top + 4; y++) R(0, y, W, 1, sky[Math.min(4, Math.floor(y / (top + 4) * 5 + (hash(0, y) < .3 ? 1 : 0)))]);
+    for (let i = 0; i < W; i += 37) if (hash(i, 9) < .7) R(i + 3, Math.floor(hash(i, 2) * (top - 2)), 1, 1, '#f4ecd8');
+    // facade tiers
+    for (let t = 0; t < nT; t++) {
+      const y0 = top + t * tierH;
+      R(0, y0, W, tierH, t % 2 ? '#a08a6c' : '#958065');
+      R(0, y0, W, 2, '#c3ad8a'); R(0, y0 + tierH - 1, W, 1, '#6f5e49');
+      const aw = archW - 4, ah = tierH - 7, off = t % 2 ? archW >> 1 : 0;
+      for (let x = -archW + off; x < W; x += archW) {
+        const ax = x + 2, ay = y0 + 4;
+        R(ax + 1, ay, aw - 2, 1, '#2a2026'); R(ax, ay + 1, aw, ah - 1, '#2a2026');
+        R(ax - 2, ay, 1, ah, '#c3ad8a');
+        for (let k = 0; k < 3; k++) {
+          const hx = ax + 1 + k * 4, seed = Math.floor(x + t * 1000 + k);
+          if (hx + 3 > ax + aw || hash(seed, t, 5) < .18) continue;
+          const up = fr && hash(seed, t, 3) < .3 ? 1 : 0, skin = SKIN[Math.floor(hash(seed, t, 2) * 5)], by = ay + ah - 6 - up;
+          R(hx, by, 3, 1, HAIR[Math.floor(hash(seed, t, 4) * HAIR.length)]);
+          R(hx, by + 1, 3, 2, skin); R(hx, by + 1, 1, 1, HAIR[Math.floor(hash(seed, t, 4) * HAIR.length)]); R(hx + 1, by + 2, 1, 1, shade(skin, .55));
+          R(hx, by + 3, 3, 3 + up, crowdColour(Math.floor(hash(seed, t, 1) * 9)));
+          if (up) { R(hx - 1, by, 1, 2, skin); R(hx + 3, by, 1, 2, skin); }
+        }
+      }
+    }
+    // podium wall and emperor's box
+    const py = top + nT * tierH;
+    R(0, py, W, floor - py, '#4a3a33'); R(0, py, W, 1, '#e8c14a'); R(0, floor - 1, W, 1, '#2a201c');
+    for (let x = 4; x < W; x += 16) R(x, py + 2, 10, floor - py - 4, '#55443b');
+    const bx = (W >> 1) - 16;
+    R(bx - 1, py - 12, 34, floor - py + 12, '#e8c14a'); R(bx, py - 11, 32, floor - py + 10, '#7e2a24');
+    for (let i = 0; i < 32; i += 6) R(bx + i, py - 11, 3, 4, '#c2453d');
+    R(bx + 14, py - 5, 4, 4, '#f4ecd8');
+    // gates
+    for (const gx of o.gateX) { R(gx - 6, py + 1, 12, floor - py - 1, '#120e10'); for (let i = 1; i < 12; i += 2) R(gx - 6 + i, py + 1, 1, floor - py - 1, '#3a3036'); }
+    // sand
+    for (let y = floor; y < H; y++) for (let x = 0; x < W; x++) {
+      const n = hash(x, y), depth = (y - floor) / (H - floor);
+      let c = depth < .08 ? '#a8804c' : n < .06 ? '#b98f57' : n > .97 ? '#ecd09a' : '#d8b27a';
+      if (depth > .08 && depth < .2 && n < .35) c = '#c79f68';
+      g.fillStyle = c; g.fillRect(x, y, 1, 1);
+    }
+    return cv;
+  });
+  return { frames, floor, top, tierH, nT, W, H, o };
+}
+
+// ================================================================ animation sheet + colour strip
+const SHEET_ANIMS = [['idle', 'walk', 'charge', 'swing', 'throw', 'hurt'], ['block', 'heal', 'think', 'loot', 'victory', 'dead']];
+function sheet() {
+  const cv = document.getElementById('sheet'), S = 3, cw = 32, ch = 30, lab = 30, head = 8;
+  const W = lab + cw * 6, H = (head + ch * 4) * 2;
+  cv.width = W * S; cv.height = H * S; cv.style.width = W * S + 'px';
+  const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+  const fs = BUILD_IDS.map((b, i) => ({ build: b, color: [COLOURS['first-principles'], COLOURS['constraint-first'], COLOURS['socratic'], COLOURS['worked-example']][i], dir: 1, weapon: b === 'opus' ? null : 'sword', atkW: WEAPONS.warhammer }));
+  let t0 = 0;
+  const vis = { on: true }; new IntersectionObserver(e => { vis.on = e[0].isIntersecting; }).observe(cv);
+  function draw(ts) {
+    if (vis.on) {
+      g.fillStyle = '#211c26'; g.fillRect(0, 0, cv.width, cv.height);
+      SHEET_ANIMS.forEach((row, bi) => {
+        const by = bi * (head + ch * 4);
+        g.fillStyle = '#c9b48a'; g.font = '600 14px "Pixelify Sans", system-ui'; g.textBaseline = 'middle';
+        row.forEach((a, ci) => g.fillText(a, (lab + ci * cw + 3) * S, (by + head / 2 + 1) * S));
+        fs.forEach((F, ri) => {
+          const y = by + head + ri * ch;
+          g.fillStyle = ri % 2 ? '#2a242f' : '#262029'; g.fillRect(0, y * S, W * S, ch * S);
+          g.fillStyle = '#e8c14a'; g.font = '14px "Pixelify Sans", system-ui';
+          g.fillText(BUILDS[F.build].name, 6, (y + ch / 2) * S);
+          row.forEach((a, ci) => {
+            const A = ANIMS[a], cyc = A.once ? A.frames * A.ms + 700 : 1e9;
+            const t = (ts + ri * 97) % cyc;
+            g.fillStyle = '#d8b27a'; g.fillRect((lab + ci * cw + 2) * S, (y + ch - 4) * S, (cw - 4) * S, S);
+            paintFighter(g, F, lab + ci * cw + cw / 2 - (a === 'dead' ? 3 : 0), y + ch - 4, S, a, t);
+          });
+        });
+      });
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+}
+
+let stripBuild = 'sonnet';
+function strip() {
+  const cv = document.getElementById('strip'), S = 3, cw = 26, ch = 34, per = 8;
+  const W = cw * per, H = ch * 2;
+  cv.width = W * S; cv.height = H * S; cv.style.width = W * S + 'px';
+  const g = cv.getContext('2d');
+  const names = Object.keys(COLOURS);
+  const vis = { on: true }; new IntersectionObserver(e => { vis.on = e[0].isIntersecting; }).observe(cv);
+  function draw(ts) {
+    if (vis.on) {
+      g.fillStyle = '#211c26'; g.fillRect(0, 0, cv.width, cv.height);
+      names.forEach((n, i) => {
+        const cx = (i % per) * cw + cw / 2, cy = Math.floor(i / per) * ch + ch - 11;
+        g.fillStyle = '#d8b27a'; g.fillRect((cx - 11) * S, cy * S, 22 * S, S);
+        paintFighter(g, { build: stripBuild, color: COLOURS[n], dir: 1 }, cx, cy, S, 'walk', ts + i * 60);
+        g.fillStyle = '#a69d8e'; g.font = '11px "Pixelify Sans", system-ui'; g.textAlign = 'center';
+        g.fillText(n.replace(/-/g, ' '), cx * S, (cy + 7) * S);
+      });
+      g.textAlign = 'start';
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+}
+
+// ================================================================ people: crowd, judges, thumbs
+const THUMB = [
+  '...KK.....',
+  '..KSSK....',
+  '..KSSK....',
+  '..KSSKKKK.',
+  'KKKSSSSSSK',
+  'KSSSSSDDSK',
+  'KSSSSSSSSK',
+  'KSSSSSDDSK',
+  'KSSSSSSSSK',
+  '.KKKKKKKK.',
+];
+const THUMB_SKIN = '#f1c9a0';
+/** A badge with a thumb on it. up: true for up (green), false for down (red). (cx, cy) is its centre. */
+function paintThumb(R, cx, cy, up) {
+  const ring = up ? '#2f9d5f' : '#c4342b';
+  R(cx - 7, cy - 6, 15, 13, '#000'); R(cx - 6, cy - 7, 13, 15, '#000');
+  R(cx - 6, cy - 5, 13, 11, ring); R(cx - 5, cy - 6, 11, 13, ring);
+  R(cx - 5, cy - 4, 11, 9, C.white); R(cx - 4, cy - 5, 9, 11, C.white);
+  for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) {
+    const ch = THUMB[up ? y : 9 - y][x]; if (ch === '.') continue;
+    R(cx - 5 + x, cy - 5 + y, 1, 1, ch === 'K' ? C.ink : ch === 'D' ? shade(THUMB_SKIN, .78) : THUMB_SKIN);
+  }
+}
+/** A spectator, front view, 9 wide and 17 tall. (x, y) is the middle of the feet. */
+function paintHuman(R, x, y, h) {
+  const L = x - 4, skin = h.skin, ink = C.ink;
+  R(L + 2, y - 3, 2, 2, skin); R(L + 5, y - 3, 2, 2, skin); R(L + 2, y - 1, 2, 1, C.woodD); R(L + 5, y - 1, 2, 1, C.woodD);
+  R(L + 1, y - 10, 7, 7, h.tunic); R(L + 2, y - 11, 5, 1, h.tunic);
+  if (h.sash) for (let i = 0; i < 6; i++) R(L + 2 + i, y - 10 + i, 1, 1, h.sash);
+  R(L, y - 10, 1, 4, skin);
+  if (h.arm) { R(L + 8, y - 11, 1, 1, skin); R(L + 9, y - 15, 1, 4, skin); }
+  else R(L + 8, y - 10, 1, 4, skin);
+  R(L + 3, y - 12, 3, 1, skin);
+  R(L + 2, y - 16, 5, 4, skin);
+  R(L + 1, y - 17, 7, 2, h.hair); R(L + 1, y - 15, 1, 2, h.hair); R(L + 7, y - 15, 1, 2, h.hair);
+  R(L + 3, y - 14, 1, 1, ink); R(L + 5, y - 14, 1, 1, ink); R(L + 4, y - 13, 1, 1, shade(skin, .7));
+  if (h.laurel) { R(L + 1, y - 17, 1, 1, C.leaf); R(L + 3, y - 18, 1, 1, C.leaf); R(L + 5, y - 18, 1, 1, C.leaf); R(L + 7, y - 17, 1, 1, C.leaf); }
+  if (h.thumb !== undefined && h.thumb !== null) paintThumb(R, L + 9, y - 24, h.thumb);
+}
+const JUDGE_LOOK = i => ({ skin: SKIN[i % 5], hair: HAIR[(i * 3) % HAIR.length], tunic: C.white, sash: '#7a3a8a', laurel: true });
+
+function people() {
+  const cv = document.getElementById('people'), S = 4, W = 150, H = 44;
+  cv.width = W * S; cv.height = H * S; cv.style.width = W * S + 'px';
+  const g = cv.getContext('2d');
+  const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x * S, y * S, w * S, h * S); };
+  const vis = { on: true }; new IntersectionObserver(e => { vis.on = e[0].isIntersecting; }).observe(cv);
+  function draw(ts) {
+    if (vis.on) {
+      R(0, 0, W, H, '#2a2026'); R(0, 34, W, 10, '#958065'); R(0, 34, W, 1, '#c3ad8a');
+      for (let i = 0; i < 5; i++) {
+        const up = Math.floor(ts / 450 + i) % 3 === 0;
+        paintHuman(R, 8 + i * 12, 34 - (up ? 1 : 0), { skin: SKIN[i], hair: HAIR[i + 1], tunic: crowdColour(i * 2), arm: up });
+      }
+      const which = Math.floor(ts / 1600) % 2 === 0;
+      paintHuman(R, 82, 34, Object.assign(JUDGE_LOOK(1), { arm: true, thumb: which }));
+      paintThumb(R, 112, 20, true); paintThumb(R, 132, 20, false);
+      g.fillStyle = '#c9b48a'; g.font = '13px "Pixelify Sans", system-ui'; g.textAlign = 'center';
+      g.fillText('crowd', 32 * S, 41 * S); g.fillText('judge', 82 * S, 41 * S); g.fillText('winner', 112 * S, 41 * S); g.fillText('loser', 132 * S, 41 * S);
+      g.textAlign = 'start';
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+}
+
+// ================================================================ helpers for real runs
+function strHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; }
+function pickWeaponFor(tier, key) {
+  const list = byTier(tier); const [name, w] = list[strHash(key) % list.length]; return Object.assign({ name }, w);
+}
+function bigWeapon(key) { const n = ['warhammer', 'greatsword', 'flail'][strHash(key) % 3]; return Object.assign({ name: n }, WEAPONS[n]); }
+function tierOf(m, defender, title) {
+  const opp = defender === m.a ? m.b : m.a;
+  const a = (m.atk[opp] || []).find(x => x.title === title);
+  return a ? a.tier : 'MAJOR';
+}
+function clock(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 3600) + ':' + String(Math.floor(sec / 60) % 60).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0'); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function seededShuffle(a, seed) { let x = (seed * 2654435761) >>> 0 || 1; for (let i = a.length - 1; i > 0; i--) { x = Math.imul(x ^ (x >>> 15), 2246822519) >>> 0; const j = x % (i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// Points to stand on: a grid inside the sand, tightened until it fits.
+function gridSpots(map, count, pairW, seed) {
+  let dx = 46, dy = 30, pts = [];
+  const c = map.centre();
+  for (let tries = 0; tries < 40; tries++) {
+    pts = [];
+    for (let j = -12; j <= 12; j++) for (let i = -16; i <= 16; i++) {
+      const x = c.x + i * dx + (j % 2 ? dx / 2 : 0), y = c.y + j * dy;
+      if (map.inside(x - pairW, y) && map.inside(x + pairW, y)) pts.push({ x, y });
+    }
+    if (pts.length >= count) break;
+    dx *= .92; dy *= .92;
+  }
+  pts.sort((p, q) => Math.hypot(p.x - c.x, (p.y - c.y) * 1.6) - Math.hypot(q.x - c.x, (q.y - c.y) * 1.6));
+  return seededShuffle(pts.slice(0, count), seed);
+}
+
+// ================================================================ the colosseum, playing a real run
+const INTRO = 4500;
+class RunPlayer extends Engine {
+  constructor(canvas, overlay, statusEl) {
+    super(canvas, 400, 250, 3);
+    this.overlay = overlay; this.statusEl = statusEl;
+    this.variant = 'oval'; this.buildMode = 'sonnet';
+    const oval = ovalBackground(400, 250);
+    Object.assign(oval, {
+      centre() { return { x: this.cx, y: this.cy }; },
+      bench() { return { x: this.cx - this.rx + 22, y: this.cy + 16 }; },
+    });
+    const pano = panoramaBackground(400, 250, { floor: 128, tierH: 30, tiers: 3, top: 26, archW: 16, gateX: [30, 370] });
+    Object.assign(pano, {
+      inside(x, y) { return y > 144 && y < 242 && x > 12 && x < 388; },
+      centre() { return { x: 200, y: 192 }; },
+      gates() { return [{ x: 30, y: 136 }, { x: 370, y: 136 }]; },
+      stand(x) { return { x: Math.max(10, Math.min(390, x)), y: 26 + 3 * 30 - 4 }; },
+      bench() { return { x: 46, y: 150 }; },
+    });
+    this.maps = { oval, pano };
+    this.judges = []; this.badges = [];
+    canvas.addEventListener('click', e => this.click(e));
+    canvas.addEventListener('mousemove', e => this.hover(e));
+    canvas.addEventListener('mouseleave', () => hideTip());
+  }
+  get map() { return this.maps[this.variant]; }
+  background() { return this.map.frames[Math.floor(this.time / 450) % 2]; }
+
+  // ---------------------------------------------------------------- loading and seeking
+  load(run) {
+    this.run = run;
+    this.matchById = {};
+    run.rounds.forEach(rd => rd.matches.forEach(m => { m.round = rd.n; this.matchById[m.id] = m; }));
+    // Compress the real gaps between files: a long wait becomes at most 2.2 s, a burst stays a burst.
+    let t = INTRO, prev = run.events.length ? run.events[0][0] : 0;
+    this.timeline = run.events.map((e, i) => { t += i ? Math.min(2200, Math.max(70, (e[0] - prev) * 45)) : 0; prev = e[0]; return { rt: t, ev: e }; });
+    this.duration = t + 1500;
+    if (this.onLoad) this.onLoad();
+    this.seek(0);
+  }
+  fighter(id) { return this.byId[id]; }
+  setup() {
+    const run = this.run, ids = Object.keys(run.agents).sort();
+    this.byId = {};
+    const crates = gridSpots(this.map, ids.length, 4, 1);
+    const gates = this.map.gates();
+    this.crates = crates.map(p => Object.assign({}, p, { taken: false }));
+    ids.forEach((id, i) => {
+      const card = run.agents[id];
+      const f = {
+        id, card, build: this.buildMode === 'mixed' ? BUILD_IDS[strHash(id) % 4] : this.buildMode, color: COLOURS[card.card[0]],
+        x: gates[i % 2].x, y: gates[i % 2].y + (i % 5) - 2, dir: i % 2 ? -1 : 1, anim: 'loot', animT: (i * 137) % 900,
+        alive: true, busy: true, hp: 100, pips: 0, weapon: null, spawned: false, crate: this.crates[i], match: null, idleUntil: 0,
+      };
+      this.byId[id] = f; this.fighters.push(f);
+    });
+  }
+  async seek(T) {
+    this.clear(); this.overlay.innerHTML = ''; hideTip();
+    this.judges = []; this.badges = []; this.openRound = 0; this.evIdx = 0; this.evClock = 0;
+    this.finished = false; this.ghost = null; this.champion = null; this.lastStatus = ''; this.finalOpen = false; this.finalChain = null; this.blocked = false;
+    this.counts = {};
+    this.seeking = true; this.instant = true;
+    const gen = this.gen;
+    this.setup();
+    if (T < INTRO) {
+      this.instant = false;
+      this.banner('The gates open');
+      this.fighters.forEach((f, i) => {
+        f.anim = 'walk';
+        this.wait(i * Math.min(60, 3000 / this.fighters.length)).then(() =>
+          this.moveTo(f, f.crate.x - 6, f.crate.y, 48, 'walk').then(() => { f.dir = 1; f.atCrate = true; if (f.spawned) this.equip(f); else this.setAnim(f, 'loot', true); }));
+      });
+    } else {
+      for (const f of this.fighters) { f.x = f.crate.x - 6; f.y = f.crate.y; f.dir = 1; f.atCrate = true; }
+      while (this.evIdx < this.timeline.length && this.timeline[this.evIdx].rt <= T) {
+        await this.dispatch(this.timeline[this.evIdx++].ev);
+        if (gen !== this.gen) return;
+      }
+      if (this.evIdx >= this.timeline.length) this.crown(true);
+    }
+    this.evClock = T; this.instant = false; this.seeking = false;
+    this.status(this.describe());
+  }
+
+  // ---------------------------------------------------------------- the event clock
+  tick(dt) {
+    if (!this.run) return;
+    if (!this.seeking && !this.blocked) {
+      this.evClock = Math.min(this.duration, this.evClock + dt);
+      while (this.evIdx < this.timeline.length && this.timeline[this.evIdx].rt <= this.evClock) {
+        const ev = this.timeline[this.evIdx].ev;
+        const m = this.matchById[ev[2]];
+        if (m && ev[1] !== 'spawn' && m.round > this.openRound) {
+          this.blocked = true;
+          const gen = this.gen;
+          this.openRoundN(m.round).then(() => { if (gen === this.gen) this.blocked = false; });
+          break;
+        }
+        if (ev[1] === 'final' && !this.finalOpen) {
+          this.blocked = true; const gen = this.gen;
+          this.openFinal().then(() => { if (gen === this.gen) this.blocked = false; });
+          break;
+        }
+        this.evIdx++;
+        this.dispatch(ev);
+      }
+      if (this.evIdx >= this.timeline.length && !this.finished) {
+        this.finished = true; const gen = this.gen;
+        Promise.all(this.allChains()).then(() => gen === this.gen && this.crown(false));
+      }
+    }
+    // free fighters wander and think; fighters waiting in a match think now and then
+    for (const f of this.fighters) {
+      if (!f.alive || f.move) continue;
+      if (f.match && f.inFight && f.anim === 'idle' && Math.random() < dt / 2500) this.setAnim(f, 'think', true, 1400);
+      if (f.busy || this.time < f.idleUntil) continue;
+      if (Math.random() < .4) { this.setAnim(f, 'think', true); f.idleUntil = this.time + rand(1200, 2800); }
+      else {
+        let p = null;
+        for (let k = 0; k < 8 && !p; k++) { const q = { x: f.x + rand(-30, 30), y: f.y + rand(-18, 18) }; if (this.map.inside(q.x, q.y)) p = q; }
+        if (p) this.moveTo(f, p.x, p.y, rand(14, 22), 'walk');
+        f.idleUntil = this.time + rand(300, 900);
+      }
+    }
+    this.judges = this.judges.filter(j => j.until > this.time);
+    this.badges = this.badges.filter(b => b.until > this.time);
+    if (!this.seeking && Math.floor(this.time / 250) !== this.lastUi) { this.lastUi = Math.floor(this.time / 250); this.status(this.describe()); if (this.onClock) this.onClock(); }
+  }
+  allChains() { return this.run.rounds.flatMap(rd => rd.matches.map(m => m.chain || Promise.resolve())).concat(this.finalChain || []); }
+  realTime() {
+    let i = this.evIdx - 1; if (i < 0) return 0;
+    return this.timeline[i].ev[0];
+  }
+  describe() {
+    const c = this.counts, run = this.run;
+    if (this.champion) return `Champion: ${this.champion.id} after ${run.rounds.length} rounds, ${run.n} agents in, 1 left.` + (run.final ? ` Against the rejected answer: ${run.final.better === 'champion' ? 'the champion' : 'the old answer'} scored higher, ${run.final.champion_total} to ${run.final.baseline_total}.` : '');
+    if (!this.openRound) return `Spawn: ${c.spawn || 0} of ${run.n} first solutions written (looting)`;
+    const rd = run.rounds[this.openRound - 1], M = rd.matches.length, k = this.openRound;
+    const a = c['attack' + k] || 0, d = c['defend' + k] || 0, j = c['judge' + k] || 0;
+    const alive = this.fighters.filter(f => f.alive).length;
+    const phase = j ? `judging, ${j} of ${M} verdicts in` : d ? `defending, ${d} of ${2 * M} defenses in` : `attacking, ${a} of ${2 * M} attack files in`;
+    return `Round ${k} of ${run.rounds.length} · ${alive} alive · ${phase}` + (rd.bye ? ` · ${rd.bye} has a bye` : '');
+  }
+  status(t) { if (t !== this.lastStatus) { this.statusEl.textContent = t; this.lastStatus = t; } }
+  banner(text, red) {
+    if (this.instant) return;
+    const b = document.createElement('div'); b.className = 'banner' + (red ? ' red' : ''); b.textContent = text;
+    b.style.animationDuration = 2.2 / this.speed + 's'; this.overlay.append(b); setTimeout(() => b.remove(), 2300 / this.speed);
+  }
+
+  // ---------------------------------------------------------------- instant or animated primitives
+  go(f, x, y, speed, anim = 'walk') { if (this.instant) { f.x = x; f.y = y; f.move = null; return Promise.resolve(); } return this.moveTo(f, x, y, speed, anim); }
+  pause(ms) { return this.instant ? Promise.resolve() : this.wait(ms); }
+  anim(f, a, ms) { if (!this.instant) this.setAnim(f, a, true, ms); }
+
+  // ---------------------------------------------------------------- events
+  dispatch(e) {
+    const type = e[1];
+    this.counts[type === 'spawn' ? 'spawn' : type + (this.matchById[e[2]] ? this.matchById[e[2]].round : '')] =
+      (this.counts[type === 'spawn' ? 'spawn' : type + (this.matchById[e[2]] ? this.matchById[e[2]].round : '')] || 0) + 1;
+    if (type === 'spawn') return this.onSpawn(this.fighter(e[2]));
+    if (type === 'final') { if (this.instant) return this.openFinal().then(() => this.onFinal()); this.finalChain = this.onFinal(); return Promise.resolve(); }
+    const m = this.matchById[e[2]];
+    if (m.round > this.openRound) return this.openRoundN(m.round).then(() => this.dispatch(e)); // only reached while seeking
+    const job = () => type === 'attack' ? this.onAttack(m, e[3]) : type === 'defend' ? this.onDefend(m, e[3]) : this.onJudge(m);
+    if (this.instant) return job();
+    const gen = this.gen;
+    m.chain = (m.chain || Promise.resolve()).then(() => gen === this.gen && job());
+    return Promise.resolve();
+  }
+  onSpawn(f) {
+    f.spawned = true;
+    if (this.instant || f.atCrate) this.equip(f);
+    return Promise.resolve();
+  }
+  equip(f) {
+    f.weapon = STARTERS[strHash(f.id) % STARTERS.length]; f.crate.taken = true;
+    if (!this.instant) { this.burst(f.crate.x, f.crate.y - 4, C.gold, 6, 30, 400); this.setAnim(f, 'idle', true); }
+    else f.anim = 'idle';
+    f.busy = false; f.idleUntil = this.time + rand(200, 900);
+  }
+  async openRoundN(n) {
+    this.openRound = n;
+    const rd = this.run.rounds[n - 1];
+    if (!this.instant && n > 1) { await Promise.all(this.run.rounds[n - 2].matches.map(m => m.chain || Promise.resolve())); await this.wait(500); }
+    this.banner(`Round ${n}`);
+    const spots = gridSpots(this.map, rd.matches.length, 12, n + 7);
+    for (const f of this.fighters) if (f.alive) { f.bye = false; }
+    if (rd.bye) {
+      const f = this.fighter(rd.bye), b = this.map.bench();
+      f.bye = true; f.busy = true; f.match = null;
+      this.go(f, b.x, b.y, 30).then(() => { if (!this.instant) this.setAnim(f, 'think', true); else f.anim = 'think'; });
+    }
+    rd.matches.forEach((m, i) => {
+      const A = this.fighter(m.a), B = this.fighter(m.b), s = spots[i];
+      m.spot = s; A.match = B.match = m; A.busy = B.busy = true; A.hp = B.hp = 100;
+      A.home = { x: s.x - 11, y: s.y }; B.home = { x: s.x + 11, y: s.y };
+      if (!A.spawned) this.equip(A); if (!B.spawned) this.equip(B);
+      A.busy = B.busy = true;
+      const arrive = Promise.all([this.go(A, A.home.x, A.home.y, 40), this.go(B, B.home.x, B.home.y, 40)])
+        .then(() => { A.dir = 1; B.dir = -1; A.inFight = B.inFight = true; if (this.instant) { A.anim = B.anim = 'idle'; } });
+      m.chain = arrive;
+    });
+    if (!this.instant) await this.wait(1200);
+  }
+  async onAttack(m, X) {
+    const A = this.fighter(X), D = this.fighter(X === m.a ? m.b : m.a), list = m.atk[X] || [];
+    if (this.instant) { D.hp = Math.max(4, D.hp - list.reduce((s, a) => s + DMG[a.tier], 0)); return; }
+    const gen = this.gen, live = () => gen === this.gen;
+    if (!list.length) { this.setAnim(A, 'think', true, 900); await this.wait(900); return; }
+    for (let i = 0; i < list.length; i++) {
+      await this.strike(A, D, list[i], pickWeaponFor(list[i].tier, m.id + X + i)); if (!live()) return;
+      await this.wait(160); if (!live()) return;
+    }
+  }
+  async strike(A, D, atk, wp) {
+    const gen = this.gen, live = () => gen === this.gen;
+    A.atkW = wp; A.dir = D.x > A.x ? 1 : -1;
+    if (wp.kind === 'melee') {
+      const reach = (BUILDS[A.build].w + BUILDS[D.build].w) / 2 + 3, d = A.dir;
+      await this.moveTo(A, D.x - A.dir * reach, D.y, 85, 'charge'); if (!live()) return;
+      this.setAnim(A, 'swing', true, 360); await this.wait(120); if (!live()) return;
+      this.hit(D, A, atk);
+      await this.wait(240); if (!live()) return;
+      await this.moveTo(A, A.home.x, A.home.y, 55, 'walk', false); A.dir = d;
+    } else {
+      this.setAnim(A, 'throw', true, 300); await this.wait(150); if (!live()) return;
+      await this.throwAt(A, D, wp); if (!live()) return;
+      this.hit(D, A, atk);
+    }
+  }
+  hit(D, A, atk) {
+    D.dir = A.x > D.x ? 1 : -1;
+    this.setAnim(D, 'hurt', true, 300); D.hp = Math.max(4, D.hp - DMG[atk.tier]);
+    this.burst(D.x, D.y - heightOf(D) / 2, TIERC[atk.tier], atk.tier === 'FATAL' ? 16 : 7, 55, 450);
+    if (atk.tier === 'FATAL') this.shake = 240;
+  }
+  async onDefend(m, Y) {
+    const f = this.fighter(Y), opp = Y === m.a ? m.b : m.a, took = m.atk[opp] || [], def = m.def[Y] || [];
+    if (this.instant) { f.hp = Math.min(100, f.hp + took.reduce((s, a) => s + DMG[a.tier], 0)); return; }
+    const gen = this.gen, live = () => gen === this.gen;
+    if (!took.length) return;
+    for (let i = 0; i < took.length; i++) {
+      const st = (def[i] || {}).stance || 'CONCEDE';
+      if (st === 'REBUT') { this.setAnim(f, 'block', true, 420); this.burst(f.x + f.dir * 7, f.y - heightOf(f) / 2, C.spark, 6, 45, 300); }
+      else { this.setAnim(f, 'heal', true, 600); this.burst(f.x, f.y - heightOf(f), C.heal, 4, 25, 400, -20); }
+      f.hp = Math.min(100, f.hp + DMG[took[i].tier]);
+      await this.wait(st === 'REBUT' ? 460 : 640); if (!live()) return;
+    }
+  }
+  async onJudge(m) {
+    const W = this.fighter(m.winner), L = this.fighter(m.loser);
+    const cause = { m, killer: W.id };
+    if (this.instant) {
+      L.alive = false; L.inFight = false; L.anim = 'dead'; L.animT = 0; L.cause = cause; L.busy = true; L.skull = m.fatal[L.id];
+      W.pips += Math.max(1, m.survived.length); W.hp = 100; W.inFight = false; W.match = null; W.busy = false;
+      W.x = L.x - 10; W.y = L.y; W.anim = 'idle';
+      return;
+    }
+    const gen = this.gen, live = () => gen === this.gen;
+    const st = this.map.stand(m.spot.x, m.spot.y);
+    this.judges.push({ x: st.x, y: st.y, until: this.time + 3800, look: JUDGE_LOOK(strHash(m.id)), arm: false });
+    await this.wait(450); if (!live()) return;
+    for (const f of [this.fighter(m.a), this.fighter(m.b)]) for (const title of (m.standing[f.id] || [])) {
+      this.setAnim(f, 'hurt', true, 300); f.hp = Math.max(4, f.hp - DMG[tierOf(m, f.id, title)]);
+      this.burst(f.x, f.y - heightOf(f) / 2, '#e0483c', 8, 50, 400);
+      await this.wait(380); if (!live()) return;
+    }
+    const j = this.judges[this.judges.length - 1]; if (j) j.arm = true;
+    this.badges.push({ f: L, up: false, until: this.time + 1600 }, { f: W, up: true, until: this.time + 1600 });
+    await this.wait(1100); if (!live()) return;
+    W.atkW = bigWeapon(m.id);
+    const d = W.dir;
+    await this.moveTo(W, L.x - W.dir * 10, L.y, 95, 'charge'); if (!live()) return;
+    this.setAnim(W, 'swing', true, 400); await this.wait(125); if (!live()) return;
+    L.alive = false; L.inFight = false; L.cause = cause; L.skull = m.fatal[L.id]; this.setAnim(L, 'dead', true);
+    this.burst(L.x, L.y - 5, '#e0483c', 14, 60, 600); this.shake = 220;
+    await this.wait(450); if (!live()) return;
+    await this.moveTo(W, L.x - d * 10, L.y, 26, 'walk'); if (!live()) return;
+    W.dir = L.x > W.x ? 1 : -1;
+    this.setAnim(W, 'loot', true); await this.wait(800); if (!live()) return;
+    W.pips += Math.max(1, m.survived.length); this.burst(W.x, W.y - 14, C.gold, 8, 35, 500);
+    W.inFight = false; W.match = null; W.hp = 100; this.setAnim(W, 'idle'); W.busy = false; W.idleUntil = this.time + 400;
+  }
+  async openFinal() {
+    this.finalOpen = true;
+    if (!this.instant) { await Promise.all(this.allChains()); await this.wait(600); }
+    const champ = this.fighters.find(f => f.alive), gates = this.map.gates(), c = this.map.centre();
+    this.ghost = { id: 'the rejected answer', build: champ.build, color: '#ece6d8', ghost: true, x: gates[1].x, y: gates[1].y, dir: -1, anim: 'walk', animT: 0, alive: true, busy: true, hp: 100, pips: 0 };
+    this.fighters.push(this.ghost);
+    champ.busy = true; champ.home = { x: c.x - 12, y: c.y }; this.ghost.home = { x: c.x + 12, y: c.y };
+    this.banner('The final check');
+    await Promise.all([this.go(champ, c.x - 12, c.y, 40), this.go(this.ghost, c.x + 12, c.y, 30)]);
+    champ.dir = 1; this.ghost.dir = -1; champ.inFight = this.ghost.inFight = true;
+  }
+  async onFinal() {
+    const fin = this.run.final, champ = this.fighters.find(f => f.alive && !f.ghost), G = this.ghost;
+    if (!fin || !G) return;
+    const champWins = fin.better === 'champion';
+    if (this.instant) { G.anim = champWins ? 'dead' : 'victory'; G.alive = champWins ? false : true; G.final = fin; return; }
+    const gen = this.gen, live = () => gen === this.gen, c = this.map.centre();
+    const st = this.map.stand(c.x, c.y);
+    this.judges.push({ x: st.x, y: st.y, until: this.time + 4000, look: JUDGE_LOOK(7), arm: true });
+    this.badges.push({ f: champ, up: champWins, until: this.time + 2600 }, { f: G, up: !champWins, until: this.time + 2600 });
+    await this.wait(1600); if (!live()) return;
+    G.final = fin;
+    if (champWins) { G.alive = false; this.setAnim(G, 'dead', true); this.burst(G.x, G.y - 6, C.white, 14, 50, 600); }
+    else { this.setAnim(G, 'victory', true); this.banner('The old answer scored higher', true); }
+  }
+  crown(instant) {
+    const champ = this.fighters.find(f => f.alive && !f.ghost);
+    if (!champ) return;
+    this.champion = champ; champ.busy = true; champ.inFight = false;
+    if (instant) { champ.anim = 'victory'; return; }
+    this.banner(`${champ.id} is champion`);
+    this.setAnim(champ, 'victory', true);
+    for (let i = 0; i < 5; i++) this.wait(i * 600).then(() => this.burst(champ.x, champ.y - 14, pickOf([C.gold, C.white, '#c2453d', '#5b7fbf']), 10, 60, 900, 40));
+  }
+
+  // ---------------------------------------------------------------- drawing
+  drawUnder() {
+    for (const c of this.crates || []) if (!c.taken) {
+      this.R(c.x - 3, c.y - 5, 7, 5, C.wood); this.R(c.x - 3, c.y - 5, 7, 1, '#a8744a');
+      this.R(c.x - 3, c.y - 1, 7, 1, C.woodD); this.R(c.x, c.y - 5, 1, 5, C.woodD);
+    }
+  }
+  drawOver() {
+    const R = (x, y, w, h, c) => this.R(x, y, w, h, c);
+    for (const f of this.fighters) {
+      const top = f.y - heightOf(f) - BUILDS[f.build].top - 2;
+      if (!f.alive) {
+        if (f.skull) { const x = f.x + 6, y = f.y - 6; R(x, y, 3, 2, C.white); R(x, y + 2, 1, 1, C.white); R(x + 2, y + 2, 1, 1, C.white); R(x, y + 1, 1, 1, C.ink); R(x + 2, y + 1, 1, 1, C.ink); }
+        continue;
+      }
+      if (f.inFight) {
+        R(f.x - 5, top - 2, 10, 2, '#000');
+        R(f.x - 5, top - 2, Math.max(1, Math.round(f.hp / 10)), 2, f.hp > 50 ? C.heal : f.hp > 25 ? '#e0c04a' : '#e0483c');
+      }
+      for (let i = 0; i < Math.min(6, f.pips); i++) R(f.x - 5 + i * 2, top - (f.inFight ? 4 : 1), 1, 1, C.gold);
+      if (this.champion === f) { const y = top - 6; R(f.x - 3, y, 7, 2, C.gold); R(f.x - 3, y - 2, 1, 2, C.gold); R(f.x, y - 2, 1, 2, C.gold); R(f.x + 3, y - 2, 1, 2, C.gold); }
+    }
+    for (const j of this.judges) paintHuman(R, Math.round(j.x), Math.round(j.y), Object.assign({}, j.look, { arm: j.arm, thumb: j.arm ? false : null }));
+    for (const b of this.badges) if (b.f) paintThumb(R, Math.round(b.f.x), Math.round(b.f.y - heightOf(b.f) - BUILDS[b.f.build].top - 11), b.up);
+  }
+
+  // ---------------------------------------------------------------- pointer
+  toWorld(e) { const r = this.cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * this.W, y: (e.clientY - r.top) / r.height * this.H }; }
+  nearest(p) {
+    return this.fighters.map(f => ({ f, d: Math.hypot(f.x - p.x, f.y - 5 - p.y) })).sort((a, b) => a.d - b.d)[0];
+  }
+  click(e) {
+    const n = this.nearest(this.toWorld(e));
+    if (!n || n.d > 12 || n.f.ghost) return;
+    const m = n.f.alive ? n.f.match : n.f.cause && n.f.cause.m;
+    if (!m || !window.duel) return;
+    window.duel.load(m, this.fighter(m.a), this.fighter(m.b));
+    document.getElementById('duelBench').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  hover(e) {
+    const n = this.nearest(this.toWorld(e));
+    if (!n || n.d > 10) return hideTip();
+    const f = n.f;
+    if (f.ghost) {
+      const fin = f.final;
+      return showTip(e, `<h4>The rejected answer</h4>The answer you turned down, judged blind against the champion.` + (fin ? `<div style="margin-top:6px">${fin.better === 'champion' ? 'Champion' : 'Old answer'} scored higher: ${fin.champion_total} to ${fin.baseline_total}.<br><b>Why:</b> ${esc(fin.reason)}</div>` : ''));
+    }
+    const card = `${f.card.names[0]} · ${f.card.names[1]} · ${f.card.names[2]}`;
+    if (!f.alive) {
+      const m = f.cause.m, st = m.standing[f.id] || [];
+      return showTip(e, `<h4>Here lies ${f.id}</h4>${card}
+        <div style="margin-top:6px">Fell in round ${m.round} (${m.id}) to <b>${m.winner}</b>, ${m.totals[f.id]} to ${m.totals[m.winner]}.</div>
+        ${m.fatal[f.id] ? '<div style="color:#a3322a"><b>Verified fatal flaw.</b></div>' : ''}
+        <div style="margin-top:6px"><b>What killed it:</b><ul>${st.map(s => `<li>${esc(s)}, still standing</li>`).join('') || '<li>outscored, nothing left standing</li>'}</ul></div>
+        <div style="margin-top:6px"><b>Judge:</b> ${esc(m.reason || '')}</div><div class="note" style="color:#6b5e4f;margin-top:4px">Click to replay this match.</div>`);
+    }
+    const doing = this.champion === f ? 'Champion.' : f.bye ? 'Has a bye this round.' : f.match ? `Fighting ${f.match.a === f.id ? f.match.b : f.match.a} in ${f.match.id}. Click to watch.` : f.spawned ? 'Waiting for the next round.' : 'Writing its first solution.';
+    showTip(e, `<h4 style="color:#7a5a12">${f.id}</h4>${card}<div style="margin-top:6px">${doing}</div>${f.pips ? `<div>${f.pips} fixes looted from the fallen.</div>` : ''}`);
+  }
+}
+
+// ================================================================ the fight view, one real match
+class Duel extends Engine {
+  constructor(canvas, overlay, status) {
+    super(canvas, 200, 100, 5);
+    this.overlay = overlay; this.statusEl = status;
+    this.bg = panoramaBackground(200, 100, { floor: 58, tierH: 22, tiers: 2, top: 4, archW: 14, gateX: [] });
+    canvas.addEventListener('mousemove', e => this.hover(e));
+    canvas.addEventListener('mouseleave', () => hideTip());
+  }
+  background() { return this.bg.frames[Math.floor(this.time / 450) % 2]; }
+  load(m, fa, fb) {
+    this.m = m; this.looks = { [m.a]: { build: fa.build, color: fa.color, card: fa.card }, [m.b]: { build: fb.build, color: fb.color, card: fb.card } };
+    document.getElementById('duelId').textContent = `${m.id}, ${m.a} vs ${m.b}`;
+    this.run();
+  }
+  bubble(f, kind, text, ms = 1700) {
+    const el = document.createElement('div'); el.className = 'bubble';
+    el.innerHTML = `<span class="k ${kind.split(' ')[0]}">${esc(kind)}</span>${esc(text)}`;
+    el.style.left = Math.max(16, Math.min(84, f.x / this.W * 100)) + '%';
+    el.style.top = ((f.y - heightOf(f) - 9) / this.H * 100) + '%';
+    this.overlay.append(el); setTimeout(() => el.remove(), ms / this.speed);
+  }
+  banner(text, red) { const b = document.createElement('div'); b.className = 'banner' + (red ? ' red' : ''); b.textContent = text; b.style.animationDuration = 2.2 / this.speed + 's'; this.overlay.append(b); setTimeout(() => b.remove(), 2300 / this.speed); }
+  status(t) { this.statusEl.textContent = t; }
+  hover(e) {
+    const r = this.cv.getBoundingClientRect(), p = { x: (e.clientX - r.left) / r.width * this.W, y: (e.clientY - r.top) / r.height * this.H };
+    const L = this.fighters.find(f => f.anim === 'dead');
+    if (!L || Math.hypot(L.x - p.x, L.y - 5 - p.y) > 12) return hideTip();
+    const m = this.m, st = m.standing[L.id] || [];
+    showTip(e, `<h4>Here lies ${L.id}</h4>${L.card.names.join(' · ')}
+      <div style="margin-top:6px">Fell in round ${m.round} to <b>${m.winner}</b>, ${m.totals[L.id]} to ${m.totals[m.winner]}.</div>
+      ${m.fatal[L.id] ? '<div style="color:#a3322a"><b>Verified fatal flaw.</b></div>' : ''}
+      <div style="margin-top:6px"><b>What killed it:</b><ul>${st.map(s => `<li>${esc(s)}, still standing</li>`).join('') || '<li>outscored, nothing left standing</li>'}</ul></div>
+      <div style="margin-top:6px"><b>Judge:</b> ${esc(m.reason || '')}</div>`);
+  }
+  drawOver() {
+    for (const [id, f] of [['hpA', this.A], ['hpB', this.B]]) {
+      if (!f) continue;
+      const el = document.getElementById(id);
+      el.querySelector('b').textContent = f.id;
+      el.querySelector('span').textContent = f.card.names[0] + ' · ' + BUILDS[f.build].name;
+      const bar = el.querySelector('i');
+      bar.style.width = Math.max(0, f.hp) + '%';
+      bar.style.background = f.hp > 50 ? 'var(--heal)' : f.hp > 25 ? '#e0c04a' : 'var(--blood)';
+    }
+    const R = (x, y, w, h, c) => this.R(x, y, w, h, c);
+    for (const f of this.fighters) for (const w of (f.lodged || [])) {
+      if (w.state === 'gone') continue;
+      const x = f.x + f.dir * w.ox, y = f.y - heightOf(f) + w.oy, dd = -f.dir;
+      if (w.state === 'standing') { R(x - 1, y - 1, 4, 4, 'rgba(224,72,60,.55)'); }
+      R(x, y, 1, 1, C.steel); R(x + dd, y - 1, 1, 1, C.wood); R(x + 2 * dd, y - 2, 1, 1, C.wood);
+    }
+    if (this.judge) {
+      paintHuman(R, this.judge.x, 50, Object.assign({}, this.judge.look, { arm: this.judge.arm, thumb: this.judge.arm ? false : null }));
+    }
+    for (const b of this.badges || []) paintThumb(R, Math.round(b.f.x), Math.round(b.f.y - heightOf(b.f) - BUILDS[b.f.build].top - 10), b.up);
+  }
+  mk(id, x) {
+    const L = this.looks[id];
+    return { id, card: L.card, build: L.build, color: L.color, x, y: 88, dir: 1, anim: 'walk', animT: 0, hp: 100, weapon: STARTERS[strHash(id) % 4], alive: true, lodged: [] };
+  }
+  async run() {
+    this.clear(); this.overlay.querySelectorAll('.bubble,.banner').forEach(n => n.remove()); this.judge = null; this.badges = []; hideTip();
+    const gen = this.gen, live = () => gen === this.gen, m = this.m;
+    const A = this.A = this.mk(m.a, -10), B = this.B = this.mk(m.b, 210);
+    this.fighters.push(A, B);
+    this.banner(`Round ${m.round}`);
+    this.status(`${m.id}: ${A.id} vs ${B.id}`);
+    await Promise.all([this.moveTo(A, 72, 88, 45), this.moveTo(B, 128, 88, 45)]); if (!live()) return;
+    A.dir = 1; B.dir = -1; A.home = { x: 72, y: 88 }; B.home = { x: 128, y: 88 };
+    this.setAnim(A, 'think', true, 1300); this.setAnim(B, 'think', true, 1300);
+    this.status('Reading each other\'s solutions…'); await this.wait(1400); if (!live()) return;
+
+    this.status('Attack: every attack each side wrote, by its label');
+    const vol = [], la = m.atk[m.a] || [], lb = m.atk[m.b] || [];
+    for (let i = 0; i < 7; i++) { if (la[i]) vol.push([A, B, la[i], i]); if (lb[i]) vol.push([B, A, lb[i], i]); }
+    if (!vol.length) { this.bubble(A, 'NO ATTACKS', 'neither side found anything'); await this.wait(1500); }
+    for (const [att, def, atk, i] of vol) {
+      const wp = pickWeaponFor(atk.tier, m.id + att.id + i);
+      this.bubble(att, `${atk.tier} · ${wp.name}`, atk.title, 1800);
+      await this.wait(350); if (!live()) return;
+      await this.strike(att, def, atk, wp, i); if (!live()) return;
+      await this.wait(800); if (!live()) return;
+    }
+
+    this.status('Defend: shields for rebuttals, heals for conceded and fixed');
+    for (const f of [A, B]) {
+      const opp = f === A ? m.b : m.a, took = m.atk[opp] || [], def = m.def[f.id] || [];
+      for (let i = 0; i < took.length; i++) {
+        const d = def[i] || { stance: 'CONCEDE', answer: '' }, w = f.lodged[i];
+        if (d.stance === 'REBUT') {
+          this.setAnim(f, 'block', true, 700); this.burst(f.x + f.dir * 8, f.y - heightOf(f) / 2, C.spark, 10, 50, 350);
+          this.bubble(f, 'REBUT · already handled', d.answer || took[i].title, 1700);
+        } else {
+          this.setAnim(f, 'heal', true, 1200); this.burst(f.x, f.y - 12, C.heal, 8, 30, 500, -20);
+          this.bubble(f, 'CONCEDE · fixed', d.answer || took[i].title, 1700);
+        }
+        if (w) w.state = 'gone';
+        f.hp = Math.min(100, f.hp + DMG[took[i].tier]);
+        await this.wait(1500); if (!live()) return;
+      }
+    }
+
+    const W = m.winner === A.id ? A : B, L = W === A ? B : A;
+    this.judge = { x: Math.round(L.x), look: JUDGE_LOOK(strHash(m.id)), arm: false };
+    this.status(`The judge of ${m.id} stands up and checks every attack`);
+    await this.wait(1200); if (!live()) return;
+    for (const f of [A, B]) for (const t of (m.standing[f.id] || [])) {
+      const opp = f === A ? m.b : m.a, idx = (m.atk[opp] || []).findIndex(x => x.title === t), tier = tierOf(m, f.id, t);
+      if (idx >= 0 && f.lodged[idx]) f.lodged[idx].state = 'standing';
+      this.bubble(f, 'STANDING', `${t}: the rebuttal didn't hold`, 1800);
+      this.setAnim(f, 'hurt', true, 300); f.hp = Math.max(6, f.hp - DMG[tier] * 1.5);
+      this.burst(f.x, f.y - 8, '#e0483c', 10, 50, 500); this.shake = 180;
+      await this.wait(1800); if (!live()) return;
+    }
+    this.judge.arm = true;
+    this.badges = [{ f: L, up: false }, { f: W, up: true }];
+    this.status(`Thumbs down for ${L.id}. Scores ${W.id} ${m.totals[W.id]}, ${L.id} ${m.totals[L.id]}${m.fatal[L.id] ? ', with a verified fatal flaw' : ''}. ${m.reason || ''}`);
+    await this.wait(2000); if (!live()) return;
+    this.badges = [];
+    this.banner('Finish him!', true);
+    await this.wait(1400); if (!live()) return;
+    W.atkW = bigWeapon(m.id);
+    await this.moveTo(W, L.x - W.dir * 16, L.y, 110, 'charge'); if (!live()) return;
+    this.setAnim(W, 'swing', true, 600); await this.wait(125); if (!live()) return;
+    this.shake = 450; this.burst(L.x, L.y - 8, '#e0483c', 26, 80, 800); this.burst(L.x, L.y - 8, C.white, 10, 60, 300);
+    L.hp = 0; L.alive = false; L.lodged = []; this.setAnim(L, 'dead', true);
+    await this.wait(1200); if (!live()) return;
+    this.judge = null;
+
+    this.status(`${W.id} loots the body: each attack it fixed makes it stronger`);
+    await this.moveTo(W, L.x - W.dir * 14, L.y, 30, 'walk'); if (!live()) return;
+    W.dir = L.x > W.x ? 1 : -1;
+    this.setAnim(W, 'loot', true);
+    for (const s of (m.survived.length ? m.survived : ['the win itself'])) {
+      this.bubble(W, 'LOOT', '+ fixed: ' + s, 1500); this.burst(L.x, L.y - 6, C.gold, 8, 30, 500);
+      await this.wait(1500); if (!live()) return;
+    }
+    W.hp = 100; W.lodged = [];
+    this.setAnim(W, 'victory', true); await this.wait(1400); if (!live()) return;
+    this.status(`${W.id} wanders off to wait for round ${m.round + 1}. Hover the body to see what killed ${L.id}.`);
+    await this.moveTo(W, W.x < 100 ? 26 : 174, 90, 18, 'walk'); if (!live()) return;
+    this.setAnim(W, 'think', true);
+  }
+  async strike(att, def, atk, wp, i) {
+    const gen = this.gen, live = () => gen === this.gen;
+    att.atkW = wp;
+    const lodge = () => {
+      this.setAnim(def, 'hurt', true, 300); def.hp = Math.max(6, def.hp - DMG[atk.tier]);
+      def.lodged[i] = { ox: 1 + (strHash(atk.title + i) % 5), oy: 1 + (strHash(atk.title) % Math.max(2, heightOf(def) - 4)), state: 'stuck' };
+      this.burst(def.x, def.y - heightOf(def) / 2, TIERC[atk.tier], atk.tier === 'FATAL' ? 22 : 10, 60, 500);
+      if (atk.tier === 'FATAL') this.shake = 300;
+    };
+    if (wp.kind === 'melee') {
+      const reach = (BUILDS[att.build].w + BUILDS[def.build].w) / 2 + 4, d = att.dir;
+      await this.moveTo(att, def.x - att.dir * reach, def.y, 95, 'charge'); if (!live()) return;
+      this.setAnim(att, 'swing', true, 420); await this.wait(125); if (!live()) return;
+      lodge();
+      await this.wait(400); if (!live()) return;
+      await this.moveTo(att, att.home.x, att.home.y, 55, 'walk', false); att.dir = d;
+    } else {
+      this.setAnim(att, 'throw', true, 340); await this.wait(150); if (!live()) return;
+      await this.throwAt(att, def, wp); if (!live()) return;
+      lodge();
+    }
+  }
+}
+
+// ================================================================ tooltip
+const tip = document.getElementById('tip');
+function showTip(e, html) {
+  tip.innerHTML = html; tip.hidden = false;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(e.clientX - w / 2, document.documentElement.clientWidth - w - 8)) + 'px';
+  tip.style.top = Math.max(8, e.clientY - h - 16) + 'px';
+}
+function hideTip() { tip.hidden = true; }
+
+// ================================================================ wiring
+function seg(id, items, current, onPick) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  for (const [val, label] of items) {
+    const b = document.createElement('button'); b.textContent = label; b.setAttribute('aria-pressed', String(val === current));
+    b.onclick = () => { el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); onPick(val); };
+    el.append(b);
+  }
+}
+function interestingMatch(run) {
+  const all = run.rounds.flatMap(rd => rd.matches);
+  const score = m => {
+    const st = Object.values(m.def).flat().map(d => d.stance);
+    return (st.includes('REBUT') ? 2 : 0) + (st.includes('CONCEDE') ? 2 : 0) + ((m.standing[m.loser] || []).length ? 2 : 0)
+      + (m.survived.length ? 1 : 0) + (Object.values(m.atk).flat().some(a => a.tier === 'FATAL') ? 1 : 0) - Math.abs(st.length - 5) * .3;
+  };
+  return all.slice().sort((a, b) => score(b) - score(a))[0];
+}
+
+sheet(); strip(); people();
+const RUNS = window.RUNS;
+const player = new RunPlayer(document.getElementById('arena'), document.getElementById('arenaOverlay'), document.getElementById('arenaStatus'));
+window.duel = new Duel(document.getElementById('duel'), document.getElementById('duelOverlay'), document.getElementById('duelStatus'));
+const scrub = document.getElementById('scrub'), clockEl = document.getElementById('clock');
+let dragging = false;
+player.onLoad = () => { scrub.max = Math.round(player.duration); };
+player.onClock = () => { if (!dragging) scrub.value = Math.round(player.evClock); clockEl.textContent = clock(player.realTime()) + ' into the run'; };
+scrub.addEventListener('pointerdown', () => { dragging = true; });
+scrub.addEventListener('input', () => { dragging = true; });
+scrub.addEventListener('change', () => { dragging = false; player.seek(+scrub.value); });
+document.getElementById('toEnd').onclick = () => player.seek(player.duration);
+function loadRun(key) {
+  const run = RUNS[key];
+  player.load(run);
+  const m = interestingMatch(run);
+  const look = id => ({ build: player.buildMode === 'mixed' ? BUILD_IDS[strHash(id) % 4] : player.buildMode, color: COLOURS[run.agents[id].card[0]], card: run.agents[id] });
+  window.duel.load(m, look(m.a), look(m.b));
+}
+let runKey = '32';
+seg('runSeg', Object.keys(RUNS).map(k => [k, k + ' agents']), runKey, v => { runKey = v; loadRun(v); });
+seg('mapSeg', [['oval', 'Top-down oval'], ['pano', 'Side panorama']], 'oval', v => { player.variant = v; player.seek(player.evClock); });
+seg('buildSeg', BUILD_IDS.map(b => [b, BUILDS[b].name]).concat([['mixed', 'Mixed']]), 'sonnet', v => { player.buildMode = v; stripBuild = v === 'mixed' ? 'sonnet' : v; player.seek(player.evClock); });
+seg('speedSeg', [[1, '1x'], [2, '2x'], [4, '4x'], [8, '8x']], 1, v => { player.speed = v; });
+seg('duelSpeed', [[1, '1x'], [2, '2x']], 1, v => { window.duel.speed = v; });
+document.getElementById('duelReplay').onclick = () => window.duel.run();
+loadRun(runKey);
+})();
+</script>
