@@ -74,7 +74,7 @@ class RunPlayer extends Engine {
   key(e) { return e[1] === 'spawn' ? 'spawn:' + e[2] : e[1] === 'final' ? 'final' : e.slice(1).join(':'); }
   has(k) { return !!this.seen && this.seen.has(k); }
   goLive() { this.seek(this.liveHead); }
-  get live() { return this.run && !this.run.done; }
+  get live() { return this.run && !this.run.done && !this.run.stopped; }
   get roundsTotal() { let a = this.run.n, r = 0; while (a > 1) { a = Math.floor(a / 2) + (a % 2); r++; } return r; }
   /** Following the run: opened live or sent back to live, and not rewound since. */
   get atLive() { return this.live && this.following; }
@@ -97,7 +97,7 @@ class RunPlayer extends Engine {
   async seek(T) {
     T = Math.max(0, Math.min(T, this.liveHead));
     this.following = T >= this.liveHead - 9000;
-    this.clear(); this.overlay.innerHTML = ''; hideTip(); this.feedEl.innerHTML = '';
+    this.clear(); this.overlay.innerHTML = ''; hideTip(); logClear(this.feedEl); this.cleared = 0;
     this.run.rounds.forEach(rd => rd.matches.forEach(m => { m.chain = null; }));
     this.judges = []; this.flights = []; this.openRound = 0; this.evIdx = 0; this.evClock = 0;
     this.finished = false; this.ghost = null; this.champion = null; this.lastStatus = ''; this.finalOpen = false; this.finalChain = null; this.blocked = false;
@@ -166,6 +166,7 @@ class RunPlayer extends Engine {
         f.idleUntil = this.time + rand(300, 900);
       }
     }
+    for (const w of this.extras) if (w.carry) { w.carry.x = w.x - w.dir * 7; w.carry.y = w.y + 1; w.anim = w.move ? 'walk' : 'idle'; }
     this.judges = this.judges.filter(j => j.until > this.time);
     this.flights = this.flights.filter(fl => this.time < fl.t0 + fl.dur);
     if (!this.seeking && Math.floor(this.time / 250) !== this.lastUi) { this.lastUi = Math.floor(this.time / 250); this.status(this.describe()); if (this.onClock) this.onClock(); }
@@ -235,9 +236,44 @@ class RunPlayer extends Engine {
     if (!this.instant) { this.burst(f.crate.x, f.crate.y - 4, C.gold, 6, 30, 400); this.setAnim(f, 'idle', true); } else f.anim = 'idle';
     f.busy = false; f.idleUntil = this.time + rand(200, 900);
   }
+  /** A place at the edge of the sand for the k-th body, away from where the fights happen. */
+  edgeSpot(k) {
+    const map = this.map;
+    if (this.variant === 'oval') {
+      const per = 44, ring = Math.floor(k / per), i = k % per;
+      const a = Math.PI / 2 + (i + .5 + (ring % 2) * .5) / per * Math.PI * 2, e = .9 - ring * .07;
+      return { x: map.cx + map.rx * e * Math.cos(a) * .97, y: map.cy + map.ry * e * Math.sin(a) + 4 };
+    }
+    const per = 27, row = Math.floor(k / per), i = k % per;
+    return { x: 22 + i * 13.5 + (row % 2) * 6, y: [150, 240, 157, 233][row % 4] };
+  }
+  /** Between rounds, attendants walk out and drag the fallen to the edge of the sand. */
+  async clearBodies() {
+    const bodies = this.fighters.filter(f => !f.alive && !f.ghost && !f.cleared);
+    if (!bodies.length) return;
+    if (this.instant) {
+      for (const b of bodies) { const p = this.edgeSpot(this.cleared++); b.x = p.x; b.y = p.y; b.cleared = true; }
+      return;
+    }
+    const gen = this.gen, gates = this.map.gates();
+    logRow(this.feedEl, `<time>${clock(this.realTime())}</time>${tag('ROUND', 'CLEANUP')} Attendants carry ${bodies.length} fallen to the edge of the sand`, 'dim');
+    await Promise.all(bodies.map((b, i) => (async () => {
+      const spot = this.edgeSpot(this.cleared++), g = gates[i % 2];
+      const w = { x: g.x, y: g.y + (i % 3) * 2, dir: 1, anim: 'walk', animT: i * 50, skin: SKIN[i % 5], hair: HAIR[i % HAIR.length], tunic: ['#7a5a3a', '#6b6f4a', '#8a6a4a'][i % 3] };
+      await this.wait(i * 120); if (gen !== this.gen) return;
+      this.extras.push(w);
+      await this.moveTo(w, b.x + 7, b.y, 70, 'walk'); if (gen !== this.gen) return;
+      w.carry = b; b.hidden = true;
+      await this.moveTo(w, spot.x + 7, spot.y, 45, 'walk'); if (gen !== this.gen) return;
+      b.x = spot.x; b.y = spot.y; b.hidden = false; b.cleared = true; w.carry = null;
+      await this.moveTo(w, g.x, g.y, 80, 'walk'); if (gen !== this.gen) return;
+      this.extras.splice(this.extras.indexOf(w), 1);
+    })()));
+  }
   async openRoundN(n) {
     const rd = this.run.rounds[n - 1];
-    if (!this.instant && n > 1) { await Promise.all(this.run.rounds[n - 2].matches.map(m => m.chain || Promise.resolve())); await this.wait(500); }
+    if (!this.instant && n > 1) { await Promise.all(this.run.rounds[n - 2].matches.map(m => m.chain || Promise.resolve())); await this.wait(400); }
+    await this.clearBodies();
     this.openRound = n;
     this.banner(`Round ${n}`);
     const first = this.timeline.find(t => this.matchById[t.ev[2]] && this.matchById[t.ev[2]].round === n);

@@ -13,7 +13,7 @@ class Engine {
     this.clear();
     requestAnimationFrame(ts => this.frame(ts));
   }
-  clear() { this.gen++; this.time = 0; this.timers = []; this.fighters = []; this.proj = []; this.parts = []; this.shake = 0; }
+  clear() { this.gen++; this.time = 0; this.timers = []; this.fighters = []; this.extras = []; this.proj = []; this.parts = []; this.shake = 0; }
   wait(ms) { const gen = this.gen; return new Promise(res => this.timers.push({ at: this.time + ms, res, gen })); }
   setAnim(f, a, force, ms) { if (f.anim !== a || force) { f.anim = a; f.animT = 0; } f.animUntil = ms ? this.time + ms : 0; }
   moveTo(f, x, y, speed = 40, anim = 'walk', face = true) {
@@ -31,7 +31,7 @@ class Engine {
     const due = this.timers.filter(t => t.at <= this.time);
     this.timers = this.timers.filter(t => t.at > this.time);
     due.forEach(t => t.gen === this.gen && t.res());
-    for (const f of this.fighters) {
+    for (const f of this.fighters.concat(this.extras)) {
       f.animT += dt;
       if (f.animUntil && this.time >= f.animUntil) this.setAnim(f, 'idle');
       const m = f.move;
@@ -66,7 +66,13 @@ class Engine {
     g.drawImage(this.background(), 0, 0, this.W * S, this.H * S);
     if (this.drawUnder) this.drawUnder();
     const fs = this.fighters.slice().sort((a, b) => (a.anim === 'dead' ? -1 : 0) - (b.anim === 'dead' ? -1 : 0) || a.y - b.y);
-    for (const f of fs) { if (f.ghost) g.globalAlpha = .55; paintFighter(g, f, f.x, f.y, S, f.anim, f.animT); g.globalAlpha = 1; }
+    for (const f of fs) { if (f.hidden) continue; if (f.ghost) g.globalAlpha = .55; paintFighter(g, f, f.x, f.y, S, f.anim, f.animT); g.globalAlpha = 1; }
+    for (const w of this.extras.slice().sort((a, b) => a.y - b.y)) {
+      if (w.carry) paintFighter(g, w.carry, w.carry.x, w.carry.y, S, 'dead', 0);
+      g.save(); g.translate(Math.round(w.x * S), Math.round(w.y * S)); g.scale(S * (w.dir || 1), S);
+      paintWorker((a, b, ww, hh, c) => { g.fillStyle = c; g.fillRect(a, b, ww, hh); }, w, w.animT);
+      g.restore();
+    }
     if (this.drawOver) this.drawOver();
     for (const p of this.proj) {
       const angs = ['up', 'diag', 'fwd', 'down'];
@@ -214,13 +220,38 @@ const tag = (t, label) => `<span class="tag ${t}">${label || t}</span>`;
 const q = s => `<q>${esc(s)}</q>`;
 
 /** Append a row to a streamer-style log; keeps the view pinned to the bottom unless the reader scrolled up. */
+/** Make an <ol class="log"> behave like a stream chat: it follows the newest line, holds still
+    while hovered or scrolled up, and shows a "new lines" button that jumps back to the bottom. */
+function setupLog(ol) {
+  if (ol._log) return ol._log;
+  const box = document.createElement('div'); box.className = 'logbox';
+  ol.parentNode.insertBefore(box, ol); box.append(ol);
+  const jump = document.createElement('button'); jump.type = 'button'; jump.className = 'jump'; jump.hidden = true;
+  box.append(jump);
+  const st = ol._log = { follow: true, hover: false, unseen: 0, jump };
+  const atBottom = () => ol.scrollHeight - ol.scrollTop - ol.clientHeight < 24;
+  const show = () => { jump.hidden = st.unseen === 0 && st.follow; jump.textContent = st.unseen ? `↓ ${st.unseen} new` : '↓ latest'; };
+  ol.addEventListener('scroll', () => { if (!st.programmatic) { st.follow = atBottom(); if (st.follow) st.unseen = 0; show(); } });
+  ol.addEventListener('mouseenter', () => { st.hover = true; });
+  ol.addEventListener('mouseleave', () => { st.hover = false; if (st.follow) logBottom(ol); });
+  jump.onclick = () => { st.follow = true; st.unseen = 0; logBottom(ol); show(); };
+  st.show = show;
+  return st;
+}
+function logBottom(ol) {
+  const st = ol._log; if (st) st.programmatic = true;
+  ol.scrollTop = ol.scrollHeight;
+  if (st) requestAnimationFrame(() => { st.programmatic = false; });
+}
+function logClear(ol) { ol.innerHTML = ''; const st = ol._log; if (st) { st.follow = true; st.unseen = 0; st.show(); } }
 function logRow(ol, html, cls, onClick) {
-  const pinned = ol.scrollHeight - ol.scrollTop - ol.clientHeight < 30;
+  const st = setupLog(ol);
   const li = document.createElement('li'); li.innerHTML = html; if (cls) li.className = cls;
   if (onClick) { li.classList.add('open'); li.onclick = onClick; }
   ol.append(li);
-  while (ol.children.length > 500) ol.firstChild.remove();
-  if (pinned) ol.scrollTop = ol.scrollHeight;
+  while (ol.children.length > 600) ol.firstChild.remove();
+  if (st.follow && !st.hover) logBottom(ol);
+  else { st.unseen++; st.show(); }
   return li;
 }
 

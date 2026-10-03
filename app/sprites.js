@@ -265,3 +265,13 @@ function laurelOn(R, f) {
   for (let i = 1; i < B.w; i += 2) R(f.x - (B.w >> 1) + i, top, 1, 1, C.leafD);
 }
 
+
+/** An arena attendant who clears the sand: a small figure in a brown tunic, side view, walking. */
+function paintWorker(R, w, t) {
+  const f = w.anim === 'walk' ? Math.floor(t / 140) % 2 : 0, skin = w.skin || SKIN[1];
+  R(-2, -9, 4, 1, w.hair || HAIR[0]); R(-2, -8, 4, 2, skin); R(1, -8, 1, 1, C.ink);
+  R(-2, -6, 4, 4, w.tunic || '#7a5a3a'); R(-2, -3, 4, 1, shade(w.tunic || '#7a5a3a', .7));
+  R(2, -5, 2, 1, skin);
+  if (f) { R(-2, -2, 1, 2, skin); R(1, -2, 1, 2, skin); } else { R(-1, -2, 1, 2, skin); R(0, -2, 1, 2, skin); }
+  R(-2, 0, 5, 1, 'rgba(0,0,0,.25)');
+}

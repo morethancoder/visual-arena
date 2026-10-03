@@ -17,6 +17,16 @@ pixel-art colosseum you can watch live, leave, and come back to.
   run at up to 8x. Click any fight for the close-up with each fighter's log.
 - **Results**: the champion's path, the final check against the answer you rejected, and the
   winning answer to copy.
+- **Game mode**: *Enter the colosseum* plays the whole thing as a game, full screen. Write the task
+  on the emperor's decree, set the number of fighters (they walk onto the sand as you add them) and
+  the model, and seal it: the contest starts and plays full screen. Leaving full screen returns to
+  the page.
+- **Model, tokens and cost**: pick the model the agents run on before starting. While a run goes,
+  the viewer reads Claude Code's own session transcripts (`~/.claude/projects`) for the tokens used
+  so far and what they would cost at Anthropic API prices, and shows a live log of what the Claude
+  running the skill is doing (the *Claude Code* tab).
+- **Stop**: a contest started from the viewer can be stopped from the run screen; that ends Claude
+  Code and every sub-agent it started. A run you started yourself stops from Claude Code (Esc).
 
 ## Quick start
 
@@ -55,7 +65,7 @@ folder.
 | --- | --- |
 | `--root DIR` | the project that holds `.arena/` (default: current folder) |
 | `--port N` | default 8765 |
-| `--model haiku\|sonnet\|opus\|fable` | how the fighters are drawn by default (also switchable in the page) |
+| `--model haiku\|sonnet\|opus\|fable` | how the fighters are drawn when a run's model can't be detected (also switchable in the page) |
 | `--skill NAME` | the skill's command name, e.g. `arena-skill:arena` when installed as a plugin |
 | `--allow-launch` | let the lobby's **Start** button run Claude Code for you (see below) |
 | `--export RUN_DIR` | print a run's event log as JSON, for sharing or opening without a server |

@@ -1,0 +1,81 @@
+/* Game mode: the emperor's box, parchment scrolls, banners. */
+#game { position: fixed; inset: 0; z-index: 50; background: #0d0a0f; color: #2a1c10; overflow: hidden; }
+#game[hidden] { display: none; }
+body.in-game { overflow: hidden; }
+.gview { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.gview[hidden] { display: none; }
+.gview canvas { image-rendering: pixelated; }
+.gui { position: absolute; inset: 0; pointer-events: none; }
+.gui > * { pointer-events: auto; }
+.gslot { position: absolute; inset: 56px 0 0 0; }
+.gslot > .stage { width: 100%; height: 100%; }
+
+/* parchment */
+.scroll {
+  --parch: #efe0bd; --parch-2: #e2cd9f; --ink: #3a2412;
+  position: absolute; padding: 18px 22px 16px; background: radial-gradient(ellipse at 30% 20%, #f6ead0 0, var(--parch) 45%, var(--parch-2) 100%);
+  color: var(--ink); font-family: 'IM Fell English', 'Iowan Old Style', Georgia, serif; font-size: 17px; line-height: 1.35;
+  border: 2px solid #6a4a22; box-shadow: 0 8px 0 rgba(0,0,0,.35), inset 0 0 30px rgba(120,80,30,.25);
+  max-height: calc(100% - 120px); overflow: auto;
+}
+.scroll::before, .scroll::after {
+  content: ''; position: absolute; left: -10px; right: -10px; height: 12px; border-radius: 6px;
+  background: linear-gradient(#a0703a, #6a4a22 60%, #4a3016); box-shadow: 0 2px 0 rgba(0,0,0,.3);
+}
+.scroll::before { top: -8px; } .scroll::after { bottom: -8px; }
+.scroll h2 { font-family: var(--display); color: #7a1f14; font-size: 38px; margin: 0 0 4px; line-height: 1; }
+.scroll h3 { font-family: var(--display); color: #7a1f14; font-size: 26px; margin: 10px 0 2px; }
+.scroll .hint { margin: 4px 0 8px; font-style: italic; color: #5a3c1e; font-size: 15px; }
+.scroll textarea {
+  width: 100%; resize: vertical; font: 20px/1.4 'IM Fell English', Georgia, serif; color: #2a1408; background: rgba(255,250,235,.35);
+  border: 0; border-bottom: 1px dashed #8a6a3a; outline: 0; padding: 6px 4px;
+  background-image: repeating-linear-gradient(transparent 0 27px, rgba(120,80,30,.18) 27px 28px);
+}
+.scroll textarea:focus { background-color: rgba(255,250,235,.55); }
+.scroll details summary { cursor: pointer; margin-top: 8px; font-style: italic; }
+.scroll button {
+  font: 700 15px 'IM Fell English', Georgia, serif; color: #3a2412; background: #e8d3a2; border: 2px solid #6a4a22; box-shadow: 2px 2px 0 #6a4a22; padding: 5px 10px;
+}
+.scroll button[aria-pressed="true"] { background: #7a1f14; color: #f6ead0; }
+.seal {
+  display: block; margin: 14px auto 2px; padding: 10px 18px !important; font-size: 18px !important;
+  background: radial-gradient(circle at 35% 35%, #c8402e, #8a1f14) !important; color: #fbe8c8 !important; border-color: #4a1008 !important; border-radius: 22px;
+}
+.scroll button.plain { display: block; margin: 10px auto 0; }
+.decree { left: 2.5%; top: 6%; width: min(410px, 36%); transition: transform .9s cubic-bezier(.5,-.3,.6,1), opacity .9s; transform-origin: 50% 0; }
+.decree.sealed { transform: translateY(-120%) scaleY(.1) rotate(-6deg); opacity: 0; }
+.roster { right: 2.5%; top: 6%; width: min(330px, 30%); }
+.count { display: flex; align-items: center; gap: 8px; font-size: 18px; }
+.count output { font: 700 34px var(--display); color: #7a1f14; min-width: 64px; text-align: center; }
+.count button { font-size: 22px !important; width: 38px; height: 38px; padding: 0 !important; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.banners { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.banner-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 0; padding: 6px 4px 10px !important;
+  clip-path: polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%); background: #c9a86a !important;
+}
+.banner-btn[aria-pressed="true"] { background: #7a1f14 !important; color: #f6ead0 !important; }
+.banner-btn canvas { width: 64px; height: 52px; }
+.past ol { list-style: none; margin: 4px 0 0; padding: 0; font-size: 14px; }
+.past li { padding: 4px 0; border-bottom: 1px dashed rgba(106,74,34,.4); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.past li:hover { color: #7a1f14; }
+.past li.none { cursor: default; font-style: italic; }
+.gbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; z-index: 60; }
+.gbar button { font: 700 14px var(--ui); background: rgba(239,224,189,.92); color: #3a2412; border: 2px solid #000; box-shadow: 2px 2px 0 #000; padding: 7px 12px; }
+.gbar button[aria-pressed="true"] { background: var(--gold); }
+.gbar.run { bottom: auto; top: 10px; left: 50%; }
+.herald {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 90%); text-align: center;
+  font-family: 'IM Fell English', Georgia, serif; color: #f6ead0; text-shadow: 2px 2px 0 #000;
+}
+.herald .cry { font-family: var(--display); font-size: clamp(42px, 7vw, 84px); color: var(--gold); margin: 0; text-shadow: 3px 3px 0 #000, -2px -2px 0 #000; animation: pop 3s steps(6) forwards; }
+.herald .cry.small { font-size: clamp(26px, 4vw, 40px); animation: none; }
+.herald pre { text-align: left; white-space: pre-wrap; word-break: break-word; background: rgba(239,224,189,.95); color: #2a1408; padding: 10px 12px; font: 14px/1.45 var(--mono); text-shadow: none; border: 2px solid #6a4a22; }
+.herald code { background: rgba(0,0,0,.4); color: #fff; text-shadow: none; }
+.herald .seal { margin-top: 10px; }
+@media (max-width: 760px) {
+  .decree, .roster { position: relative; left: auto; right: auto; top: auto; width: auto; margin: 12px; max-height: none; }
+  .gui { overflow: auto; pointer-events: auto; }
+  .gview#gThrone { align-items: flex-start; }
+  #throne { position: fixed; inset: 0; margin: auto; z-index: -1; opacity: .5; }
+}

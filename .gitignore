@@ -3,3 +3,5 @@ __pycache__/
 .arena/
 dist/
 .dev/
+.arena-viewer-runs.json
+.arena-viewer-launch.log

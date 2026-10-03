@@ -6,15 +6,17 @@
 <title>The Arena</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;600&family=Jacquard+24&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;600&family=IM+Fell+English:ital@0;1&family=Jacquard+24&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="game.css">
 </head>
 <body>
 <header class="topbar">
   <a class="brand" href="#/">The Arena</a>
   <span class="crumb" id="crumb"></span>
   <span class="spacer"></span>
+  <button type="button" class="gamebtn" id="enterGame">Enter the colosseum</button>
   <span class="conn" id="conn"></span>
 </header>
 
@@ -25,7 +27,7 @@
       <p class="kicker">For the /arena Claude Code skill</p>
       <p class="lede">Many copies of Claude get the same task and a different strategy. They attack each other's
         answers, defend and fix their own, and a judge sends one home each match until one is left. Set the fight
-        up here, then watch it.</p>
+        up here, then watch it. Or <a href="#" id="enterGame2">enter the colosseum</a> and play it as a game.</p>
     </div>
     <div class="lobby-grid">
       <form id="newRun" class="panel" autocomplete="off">
@@ -37,6 +39,8 @@
           <span class="seg" id="agentsSeg"></span>
           <input type="number" id="agentsCustom" min="2" max="2160" placeholder="other" aria-label="Another number of competitors">
         </div>
+        <span class="flabel">Model <span>Every competitor, attacker and judge runs on it.</span></span>
+        <div class="models" id="models"></div>
         <details class="more">
           <summary>More options</summary>
           <label for="baseline" class="flabel">Answer to beat <span>(optional) The answer you rejected. The champion is judged against it at the end.</span></label>
@@ -81,12 +85,13 @@
       </div>
     </div>
 
-    <div class="arena-grid">
-      <div class="col-main">
+    <div class="stage" id="arenaStage">
+      <div class="stage-main">
         <div class="bench" id="arenaBench">
           <canvas id="arena" aria-label="The colosseum"></canvas>
           <div class="overlay" id="arenaOverlay"></div>
           <div class="chip-live live" id="liveChip">LIVE</div>
+          <button type="button" class="fsbtn" data-fs="arenaStage" title="Full screen" aria-label="Show the colosseum full screen">⛶</button>
         </div>
         <div class="timeline">
           <button class="primary" id="playBtn">Pause</button>
@@ -95,12 +100,18 @@
           <span class="clock" id="clock">0:00:00</span>
           <button id="toEnd">Go live</button>
           <button id="restart">From the start</button>
+          <button id="stopBtn" class="danger" hidden>Stop the contest</button>
         </div>
         <div class="status" id="arenaStatus"></div>
+        <div class="usage" id="usage" hidden></div>
       </div>
-      <aside class="feed-wrap col-side">
-        <header>Arena feed <span>Click a row to watch that fight</span></header>
+      <aside class="feed-wrap stage-side">
+        <header class="tabs" role="tablist">
+          <button type="button" role="tab" aria-selected="true" data-tab="feed">Arena feed</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="claudeLog">Claude Code</button>
+        </header>
         <ol class="log" id="feed"></ol>
+        <ol class="log" id="claudeLog" hidden></ol>
       </aside>
     </div>
 
@@ -110,39 +121,93 @@
     </details>
 
     <h2 class="section">The fight <span id="duelId"></span></h2>
-    <div class="bench" id="duelBench">
-      <canvas id="duel" aria-label="Close-up fight"></canvas>
-      <div class="overlay" id="duelOverlay"></div>
-      <div class="chip-live replay" id="duelChip">REPLAY</div>
-      <div class="hud">
-        <section class="fcard" id="fcA">
-          <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
-          <div class="cardline"></div>
-          <div class="hpbar"><i></i><span></span></div>
-          <ol class="log"></ol>
-        </section>
-        <section class="fcard" id="fcB">
-          <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
-          <div class="cardline"></div>
-          <div class="hpbar"><i></i><span></span></div>
-          <ol class="log"></ol>
-        </section>
+    <div class="stage duelstage" id="duelStage">
+      <div class="bench" id="duelBench">
+        <canvas id="duel" aria-label="Close-up fight"></canvas>
+        <div class="overlay" id="duelOverlay"></div>
+        <div class="chip-live replay" id="duelChip">REPLAY</div>
+        <button type="button" class="fsbtn" data-fs="duelStage" title="Full screen" aria-label="Show the fight full screen">⛶</button>
+        <div class="hud">
+          <section class="fcard" id="fcA">
+            <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
+            <div class="cardline"></div>
+            <div class="hpbar"><i></i><span></span></div>
+            <ol class="log"></ol>
+          </section>
+          <section class="fcard" id="fcB">
+            <header><i class="sw"></i><span class="name"></span><span class="state"></span><span class="model"></span></header>
+            <div class="cardline"></div>
+            <div class="hpbar"><i></i><span></span></div>
+            <ol class="log"></ol>
+          </section>
+        </div>
       </div>
+      <div class="timeline">
+        <button class="primary" id="duelPlay">Pause</button>
+        <button id="duelReplay">Replay fight</button>
+        <span class="seg" id="duelSpeed"></span>
+      </div>
+      <div class="status" id="duelStatus"></div>
     </div>
-    <div class="timeline">
-      <button class="primary" id="duelPlay">Pause</button>
-      <button id="duelReplay">Replay fight</button>
-      <span class="seg" id="duelSpeed"></span>
-    </div>
-    <div class="status" id="duelStatus"></div>
   </section>
   <div class="tip" id="tip" hidden></div>
 </main>
+
+<!-- ============================================================ game mode -->
+<div id="game" hidden>
+  <div class="gview" id="gThrone">
+    <canvas id="throne" aria-label="The emperor's box over the sand"></canvas>
+    <div class="gui">
+      <div class="scroll decree" id="decree">
+        <h2>Royal decree</h2>
+        <p class="hint">By order of the Emperor, let the competitors fight over this task:</p>
+        <textarea id="gTask" rows="6" placeholder="Write the task here, in your own hand…" aria-label="The task"></textarea>
+        <details>
+          <summary>An answer to beat</summary>
+          <textarea id="gBaseline" rows="3" placeholder="(optional) The answer you rejected" aria-label="Answer to beat"></textarea>
+        </details>
+        <button type="button" class="seal" id="gSeal">Seal the decree</button>
+        <p class="hint" id="gNote"></p>
+      </div>
+      <div class="scroll roster">
+        <h2>The games</h2>
+        <div class="count">
+          <button type="button" id="gLess" aria-label="Fewer competitors">−</button>
+          <output id="gCount">16</output>
+          <button type="button" id="gMore" aria-label="More competitors">+</button>
+          <span>competitors</span>
+        </div>
+        <div class="presets" id="gPresets"></div>
+        <div class="banners" id="gModels"></div>
+        <p class="hint" id="gCost"></p>
+        <div class="past">
+          <h3>Past games</h3>
+          <ol id="gRuns"></ol>
+        </div>
+      </div>
+      <div class="gbar">
+        <button type="button" id="gDemo">Watch a demo</button>
+        <button type="button" id="gExit">Leave the colosseum</button>
+      </div>
+      <div class="herald" id="gHerald" hidden></div>
+    </div>
+  </div>
+  <div class="gview" id="gRun" hidden>
+    <div class="gslot" id="gSlot"></div>
+    <div class="gbar run">
+      <button type="button" id="gArena">The arena</button>
+      <button type="button" id="gFight">The fight</button>
+      <button type="button" id="gBack">Back to the throne</button>
+      <button type="button" id="gExit2">Leave the colosseum</button>
+    </div>
+  </div>
+</div>
 
 <script src="sprites.js"></script>
 <script src="engine.js"></script>
 <script src="player.js"></script>
 <script src="duel.js"></script>
 <script src="main.js"></script>
+<script src="game.js"></script>
 </body>
 </html>

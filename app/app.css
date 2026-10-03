@@ -72,3 +72,91 @@ h2.section span { font: 700 15px var(--ui); color: var(--muted); margin-left: 8p
 .results h3 { margin: 16px 0 4px; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .results .final { padding: 10px 12px; background: #17131c; border-left: 4px solid var(--rebut); }
 .results .final.lost { border-left-color: var(--blood); }
+
+/* ---------------------------------------------------------------- model cards (lobby) */
+.models { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 560px) { .models { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.models .model { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; background: #17131c; color: var(--text); border: 2px solid var(--line); box-shadow: none; }
+.models .model[aria-pressed="true"] { border-color: var(--gold); background: #2a2214; }
+.models .model canvas { width: 72px; height: 56px; }
+.models .model b { font-size: 15px; }
+.models .model span { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+/* ---------------------------------------------------------------- tokens and cost */
+.usage { margin-top: 10px; padding: 10px 12px; background: var(--panel); border-left: 4px solid var(--rebut); font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.usage .cost-big { font: 700 22px var(--mono); color: var(--gold); }
+.usage .tok b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.usage .note { flex-basis: 100%; font-size: 13px; }
+button.danger { background: #d6372b; color: #fff; }
+
+/* ---------------------------------------------------------------- feed tabs and log boxes */
+.tabs { display: flex; gap: 0; padding: 0 !important; border-bottom: 2px solid var(--line); }
+.tabs button { flex: 1; border: 0; box-shadow: none; background: transparent; color: var(--muted); padding: 10px 8px; border-bottom: 3px solid transparent; font-size: 14px; }
+.tabs button[aria-selected="true"] { color: var(--gold); border-bottom-color: var(--gold); }
+.logbox { position: relative; display: flex; flex-direction: column; min-height: 0; flex: 1 1 0; }
+.logbox[hidden] { display: none !important; }
+.logbox .log { flex: 1 1 0; }
+.jump {
+  position: absolute; right: 12px; bottom: 10px; z-index: 3; font-size: 13px; padding: 6px 10px;
+  background: var(--gold); color: #120e0a; border: 2px solid #000; box-shadow: 2px 2px 0 #000;
+}
+.col-side .log { min-height: 460px; }
+.log .tag.SAY { background: var(--gold); } .log .tag.TOOL { background: #a9c7e8; } .log .tag.RES { background: #4a4255; color: var(--text); }
+.log .tag.ERR { background: var(--blood); color: #fff; } .log .tag.USER { background: #e9e0cc; }
+.log li.empty { color: var(--muted); }
+
+/* ---------------------------------------------------------------- stages and full screen */
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 380px); gap: 16px; margin-top: 4px; align-items: stretch; }
+.stage.duelstage { display: block; }
+@media (max-width: 1000px) { .stage { grid-template-columns: 1fr; } }
+.stage-main { min-width: 0; }
+.stage-side { display: flex; flex-direction: column; margin-top: 14px; min-height: 360px; max-height: 760px; }
+.fsbtn {
+  position: absolute; top: 8px; right: 8px; z-index: 4; width: 36px; height: 36px; padding: 0; font-size: 20px; line-height: 1;
+  background: rgba(16, 12, 20, .8); color: #fff; border: 2px solid #000; box-shadow: none;
+}
+#duelBench .fsbtn { top: auto; bottom: 8px; right: 8px; }
+.fcard .logbox { min-height: 0; }
+.fcard .log { height: 190px; flex: none; }
+
+.stage.full { position: relative; display: block; width: 100%; height: 100%; margin: 0; background: #000; overflow: hidden; }
+.stage.full .bench { position: absolute; inset: 0; margin: 0; border: 0; outline: 0; display: flex; align-items: center; justify-content: center; }
+.stage.full .bench canvas { flex: none; }
+.stage.full .stage-main { position: static; }
+.stage.full .timeline {
+  position: absolute; left: 12px; bottom: 12px; right: calc(min(380px, 34vw) + 24px); z-index: 5; margin: 0;
+  padding: 8px; background: rgba(10, 8, 12, .62); border: 1px solid rgba(255,255,255,.12);
+}
+.stage.duelstage.full .timeline { right: 64px; }
+.stage.full .status {
+  position: absolute; left: 12px; top: 12px; z-index: 5; margin: 0; max-width: 56%; background: transparent; border: 0; padding: 2px 0 0 150px;
+  color: #fff; text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 2px 4px rgba(0,0,0,.7);
+}
+.stage.duelstage.full .status { top: auto; bottom: 70px; left: 50%; transform: translateX(-50%); padding: 0; text-align: center; max-width: 40%; }
+.stage.full .usage {
+  position: absolute; left: 12px; top: 52px; z-index: 5; max-width: 56%; margin: 0; padding: 6px 10px; background: rgba(10, 8, 12, .62); border-left-color: var(--gold);
+}
+.stage.full .usage .note { display: none; }
+.stage.full .stage-side {
+  position: absolute; right: 12px; top: 56px; bottom: 12px; z-index: 5; width: min(380px, 34vw); margin: 0; min-height: 0; max-height: none;
+  background: transparent; border: 0;
+}
+.stage.full .stage-side .tabs { background: rgba(10, 8, 12, .55); border-bottom-color: rgba(255,255,255,.2); }
+.stage.full .stage-side .log {
+  background: transparent; border: 0; color: #fff; font-weight: 700; font-size: 13.5px;
+  text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 2px 3px rgba(0,0,0,.6);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 24px); mask-image: linear-gradient(to bottom, transparent 0, #000 24px);
+}
+.stage.full .stage-side .log li { border: 0; padding: 3px 6px; }
+.stage.full .stage-side .log li.sys { background: transparent; color: #ffe08a; }
+.stage.full .stage-side .log time { color: #e6dccb; }
+.stage.full .stage-side .tag { text-shadow: none; border: 1px solid #000; }
+.stage.full .chip-live { top: 12px; left: 12px; }
+.stage.full .fsbtn { top: 12px; right: 12px; }
+.stage.duelstage.full .fsbtn { top: auto; bottom: 12px; }
+.stage.full .hud { inset: 14px 14px auto 14px; }
+.stage.full .fcard { width: min(30%, 420px); }
+.stage.full .fcard .name { font-size: 22px; }
+.stage.full .fcard .log { height: min(42vh, 380px); font-size: 14px; }
+.stage.full .hpbar { height: 13px; }
+.stage.full #duelBench .chip-live { top: 12px; bottom: auto; left: 50%; transform: translateX(-50%); }

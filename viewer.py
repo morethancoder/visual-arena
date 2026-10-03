@@ -19,6 +19,7 @@ import json
 import mimetypes
 import os
 import secrets
+import signal
 import shutil
 import socketserver
 import subprocess
@@ -30,6 +31,7 @@ from urllib.parse import parse_qs, urlparse
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "tools"))
 import export_run  # noqa: E402
+import transcripts  # noqa: E402
 
 APP = os.path.join(HERE, "app")
 MODELS = ("haiku", "sonnet", "opus", "fable")
@@ -53,7 +55,59 @@ class State:
         self.cache = {}
         self.lock = threading.Lock()
         self.proc = None
+        self.launch = None  # {"started", "model", "run"} for the run started from the lobby
         self.log_path = os.path.join(self.root, ".arena-viewer-launch.log")
+        self.meta_path = os.path.join(self.root, ".arena-viewer-runs.json")
+        self.usage_cache = {}
+
+    # what the viewer remembers about runs it started: model, stopped
+    def meta(self):
+        try:
+            with open(self.meta_path, encoding="utf-8") as fh:
+                return json.load(fh)
+        except (OSError, ValueError):
+            return {}
+
+    def set_meta(self, run_id, **kv):
+        m = self.meta()
+        m.setdefault(run_id, {}).update(kv)
+        with open(self.meta_path, "w", encoding="utf-8") as fh:
+            json.dump(m, fh, indent=1)
+
+    def claim_launched_run(self):
+        """Tie the run the lobby started to its folder once that folder appears."""
+        L = self.launch
+        if not L or L.get("run"):
+            return
+        for d in self.run_dirs():
+            if os.path.getmtime(os.path.join(d, "arena.json")) >= L["started"] - 2:
+                L["run"] = os.path.basename(d)
+                self.set_meta(L["run"], model=L["model"], launched=True)
+                return
+
+    def created(self, d):
+        try:
+            st = json.load(open(os.path.join(d, "arena.json"), encoding="utf-8"))
+            return time.mktime(time.strptime(st.get("created", ""), "%Y-%m-%d %H:%M:%S"))
+        except (OSError, ValueError, OverflowError):
+            return os.path.getmtime(d)
+
+    def usage(self, d):
+        run_id = os.path.basename(d)
+        hit = self.usage_cache.get(run_id)
+        if hit and time.time() - hit[0] < 4:
+            return hit[1]
+        self.claim_launched_run()
+        u = transcripts.usage(self.root, run_id, since=self.created(d) - 3600)
+        meta = self.meta().get(run_id, {})
+        L = self.launch
+        u["stoppable"] = bool(L and L.get("run") == run_id and self.launching())
+        u["stopped"] = bool(meta.get("stopped"))
+        u["launch_model"] = meta.get("model")
+        if not u.get("model") and meta.get("model"):
+            u["model"], u["build"] = meta["model"], transcripts.build_for(meta["model"])
+        self.usage_cache[run_id] = (time.time(), u)
+        return u
 
     def run_dirs(self):
         if not os.path.isdir(self.arena):
@@ -107,7 +161,8 @@ class State:
             pass
         alive = sum(1 for a in st["agents"].values() if a["alive"])
         closed = sum(1 for r in st["rounds"] if r["closed"])
-        return {"id": os.path.basename(d), "n": st["agents_n"], "created": st.get("created"), "seed": st["seed"],
+        meta = self.meta().get(os.path.basename(d), {})
+        return {"id": os.path.basename(d), "n": st["agents_n"], "stopped": bool(meta.get("stopped")), "model": meta.get("model"), "created": st.get("created"), "seed": st["seed"],
                 "champion": st.get("champion"), "alive": alive, "rounds_played": closed,
                 "rounds_total": len(B_sizes(st["agents_n"])) - 1, "task": task[:300],
                 "mtime": max((os.path.getmtime(os.path.join(d, "arena.json")),
@@ -166,7 +221,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path == "/api/config":
             return self.send(200, {"root": self.S.root, "model": self.S.model, "launch": self.S.allow_launch,
                                    "skill": self.S.skill, "token": self.S.token, "claude": bool(shutil.which("claude")),
-                                   "launching": self.S.launching()})
+                                   "launching": self.S.launching(),
+                                   "models": [dict(c, **transcripts.PRICES[c["id"]]) for c in transcripts.CHOICES]})
         if path == "/api/runs":
             runs = [s for s in (self.S.summary(d) for d in self.S.run_dirs()) if s]
             runs.sort(key=lambda r: r["mtime"], reverse=True)
@@ -182,6 +238,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if self.headers.get("If-None-Match") == sig:
                 return self.send(304, b"", headers={"ETag": sig})
             return self.send(200, body, headers={"ETag": sig})
+        if path in ("/api/usage", "/api/claude"):
+            d = self.S.run_dir((qs.get("id") or [""])[0])
+            if not d:
+                return self.send(404, {"error": "no such run"})
+            if path == "/api/usage":
+                return self.send(200, self.S.usage(d))
+            return self.send(200, transcripts.claude_log(self.S.root, os.path.basename(d), since=self.S.created(d) - 3600))
         if path == "/api/launch-log":
             try:
                 with open(self.S.log_path, encoding="utf-8", errors="replace") as fh:
@@ -208,7 +271,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         url = urlparse(self.path)
-        if url.path != "/api/launch":
+        if url.path not in ("/api/launch", "/api/stop"):
             return self.send(404, {"error": "not found"})
         if not self.S.allow_launch:
             return self.send(403, {"error": "start the viewer with --allow-launch to start runs from here"})
@@ -218,6 +281,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self.send(403, {"error": "cross-origin request refused"})
         if self.headers.get("X-Arena-Token") != self.S.token:
             return self.send(403, {"error": "bad token"})
+        if url.path == "/api/stop":
+            return self.stop()
         if self.S.launching():
             return self.send(409, {"error": "a run started from here is still going"})
         try:
@@ -227,6 +292,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             task = str(req.get("task", ""))
             seed = int(req["seed"]) if str(req.get("seed", "")).strip() else None
             baseline = str(req.get("baseline", ""))
+            model = str(req.get("model") or "")
         except (ValueError, TypeError) as e:
             return self.send(400, {"error": "bad request: %s" % e})
         if not task.strip():
@@ -236,13 +302,45 @@ class Handler(http.server.BaseHTTPRequestHandler):
         exe = shutil.which(LAUNCH[0])
         if not exe:
             return self.send(400, {"error": "`claude` is not on PATH; paste the command into Claude Code instead"})
+        if model and model not in [c["id"] for c in transcripts.CHOICES]:
+            return self.send(400, {"error": "unknown model %s" % model})
         prompt = build_prompt(self.S.skill, agents, task, seed, baseline)
-        cmd = [exe] + [a.replace("{prompt}", prompt) for a in LAUNCH[1:]]
+        cmd = [exe] + [a.replace("{prompt}", prompt) for a in LAUNCH[1:]] + (["--model", model] if model else [])
         log = open(self.S.log_path, "w", encoding="utf-8")
         log.write("$ %s\n\n" % " ".join(c if c != prompt else repr(prompt[:120] + "…") for c in cmd))
         log.flush()
-        self.S.proc = subprocess.Popen(cmd, cwd=self.S.root, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
-        return self.send(200, {"ok": True, "pid": self.S.proc.pid, "prompt": prompt, "started": time.time()})
+        self.S.launch = {"started": time.time(), "model": model or None, "run": None}
+        self.S.proc = subprocess.Popen(cmd, cwd=self.S.root, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                       start_new_session=True)
+        return self.send(200, {"ok": True, "pid": self.S.proc.pid, "prompt": prompt, "started": self.S.launch["started"]})
+
+    def stop(self):
+        """End the Claude Code run the lobby started, with every sub-agent it spawned."""
+        S = self.S
+        S.claim_launched_run()
+        if not S.launching():
+            return self.send(409, {"error": "nothing started from here is running. A run you started yourself stops from Claude Code (press Esc)"})
+        try:
+            os.killpg(S.proc.pid, signal.SIGTERM)
+        except OSError:
+            pass
+        proc = S.proc
+
+        def finish():
+            try:
+                proc.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except OSError:
+                    pass
+        threading.Thread(target=finish, daemon=True).start()
+        if S.launch and S.launch.get("run"):
+            S.set_meta(S.launch["run"], stopped=True)
+            S.usage_cache.pop(S.launch["run"], None)
+        with open(S.log_path, "a", encoding="utf-8") as fh:
+            fh.write("\n[stopped from the viewer at %s]\n" % time.strftime("%H:%M:%S"))
+        return self.send(200, {"ok": True, "run": S.launch and S.launch.get("run")})
 
 
 class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):

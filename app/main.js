@@ -177,7 +177,7 @@ $('restart').onclick = () => player.seek(0);
 playBtn.onclick = () => { player.paused = !player.paused; playBtn.textContent = player.paused ? 'Play' : 'Pause'; };
 const duelPlay = $('duelPlay');
 duelPlay.onclick = () => { duel.paused = !duel.paused; duelPlay.textContent = duel.paused ? 'Play' : 'Pause'; };
-$('duelReplay').onclick = () => { duel.paused = false; duelPlay.textContent = 'Pause'; duel.run(); };
+$('duelReplay').onclick = () => { duel.paused = false; duelPlay.textContent = 'Pause'; duel.run(true); };
 
 player.variant = store.get('view', 'oval');
 player.names = store.get('names', false);
@@ -187,7 +187,8 @@ seg('speedSeg', [[1, '1x'], [2, '2x'], [4, '4x'], [8, '8x']], 1, v => { player.s
 seg('duelSpeed', [[.5, '0.5x'], [1, '1x'], [2, '2x'], [4, '4x']], 1, v => { duel.speed = v; });
 function setBuildSeg() {
   seg('buildSeg', BUILD_IDS.map(b => [b, BUILDS[b].name]), player.buildMode, v => {
-    player.buildMode = v; store.set('model', v); player.seek(player.evClock).then(() => duel.m && openFight(duel.m, false));
+    player.buildMode = v; store.set('model', v); if (player.run) store.set('look:' + player.run.run, v);
+    player.seek(player.evClock).then(() => duel.m && openFight(duel.m, false));
   });
 }
 
@@ -228,8 +229,11 @@ async function openRun(src, title) {
   let run;
   try { run = await src.first(); } catch (e) { $('arenaStatus').textContent = e.message; return; }
   if (source !== src) return;
-  player.buildMode = store.get('model', api.config ? api.config.model : 'sonnet');
+  player.buildMode = store.get('look:' + run.run, null) || store.get('model', api.config ? api.config.model : 'sonnet');
+  lookChosen = !!store.get('look:' + run.run, null);
   setBuildSeg();
+  run.stopped = false;
+  resetRunPanels();
   $('runTitle').textContent = title || run.run;
   $('runTask').textContent = run.task;
   $('crumb').textContent = `${run.run} · ${run.n} agents`;
@@ -238,6 +242,7 @@ async function openRun(src, title) {
   await player.load(run);
   openFight(pickFight(), false);
   src.follow(r => { if (source === src) player.extend(r); });
+  if (src instanceof ServerSource) followUsage(run.run, src);
 }
 async function openDemo(live) {
   const full = window.DEMO_RUN || await getJSON('demo-run.json');
@@ -254,8 +259,35 @@ function lobbyCommand() {
 }
 function refreshLobby() {
   const p = plan(agents);
+  renderModels();
   $('cost').innerHTML = `<b>${agents}</b> competitors · <b>${p.rounds}</b> rounds · <b>${p.calls + ($('baseline').value.trim() ? 1 : 0)}</b> sub-agent calls · <b>${p.waves}</b> waves of 10. Every call reads the task and one or two answers, so a bigger task costs more.`;
-  $('cmd').textContent = lobbyCommand() + ($('baseline').value.trim() ? '\n\n(with the answer to beat pasted after it)' : '');
+  const mm = modelInfo(launchModel);
+  $('cmd').textContent = (api.ok && api.config.launch ? '' : `First switch Claude Code to ${mm.name}: /model ${mm.id}\nThen: `) + lobbyCommand() + ($('baseline').value.trim() ? '\n\n(with the answer to beat pasted after it)' : '');
+}
+// ---------------------------------------------------------------- the model every agent runs on
+const DEFAULT_MODELS = [
+  { build: 'fable', id: 'claude-fable-5-1', name: 'Claude Fable 5.1', in: 10, out: 50, read: .25 },
+  { build: 'opus', id: 'claude-opus-5-5', name: 'Claude Opus 5.5', in: 4, out: 20, read: .2 },
+  { build: 'sonnet', id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', in: 2, out: 10, read: .2 },
+  { build: 'haiku', id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', in: 1, out: 5, read: .1 },
+];
+const modelList = () => (api.config && api.config.models) || DEFAULT_MODELS;
+const modelInfo = id => modelList().find(m => m.id === id) || modelList()[2];
+let launchModel = store.get('launchModel', 'claude-sonnet-5-5');
+function renderModels() {
+  const box = $('models');
+  if (box.dataset.n === String(modelList().length) && box.dataset.sel === launchModel) return;
+  box.dataset.n = modelList().length; box.dataset.sel = launchModel;
+  box.innerHTML = '';
+  for (const m of modelList()) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'model';
+    b.setAttribute('aria-pressed', String(m.id === launchModel));
+    b.innerHTML = `<canvas width="72" height="56" aria-hidden="true"></canvas><b>${esc(m.name.replace('Claude ', ''))}</b><span>$${m.in} in · $${m.out} out</span>`;
+    const g = b.querySelector('canvas').getContext('2d');
+    paintFighter(g, { build: m.build, color: COLOURS['first-principles'], dir: 1, weapon: 'sword' }, 36 / 4, 13, 4, 'idle', 0);
+    b.onclick = () => { launchModel = m.id; store.set('launchModel', m.id); refreshLobby(); };
+    box.append(b);
+  }
 }
 seg('agentsSeg', [[8, '8'], [16, '16'], [32, '32'], [64, '64'], [100, '100']], agents, v => { agents = v; $('agentsCustom').value = ''; store.set('agents', v); refreshLobby(); });
 $('agentsCustom').addEventListener('input', e => {
@@ -279,7 +311,7 @@ $('newRun').addEventListener('submit', async e => {
   try {
     const r = await fetch('api/launch', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Arena-Token': api.config.token },
-      body: JSON.stringify({ agents, task: $('task').value, seed: $('seed').value, baseline: $('baseline').value }),
+      body: JSON.stringify({ agents, task: $('task').value, seed: $('seed').value, baseline: $('baseline').value, model: launchModel }),
     });
     const res = await r.json();
     if (!r.ok) throw new Error(res.error || 'could not start');
@@ -373,3 +405,117 @@ async function route() {
   window.addEventListener('hashchange', route);
   route();
 })();
+
+// ================================================================ tokens, cost, stop, and the Claude Code log
+const fmtTok = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + 'k' : String(n);
+let lookChosen = false, usageTimer = null, claudeTimer = null, claudeKey = '', claudeShown = 0;
+function resetRunPanels() {
+  clearInterval(usageTimer); clearInterval(claudeTimer);
+  $('usage').hidden = true; $('stopBtn').hidden = true;
+  logClear($('claudeLog')); claudeKey = ''; claudeShown = 0;
+  $('claudeLog').dataset.empty = api.ok ? 'Waiting for Claude Code\'s session transcript…' : 'The Claude Code log needs viewer.py: it reads the session transcripts Claude Code writes on your machine.';
+  renderClaudeEmpty();
+}
+function renderClaudeEmpty() {
+  const ol = $('claudeLog');
+  if (!ol.children.length) logRow(ol, `<span class="note">${esc(ol.dataset.empty || '')}</span>`, 'dim empty');
+}
+function renderUsage(u) {
+  const box = $('usage');
+  box.hidden = false;
+  if (!u.found) {
+    box.innerHTML = `<b>Tokens:</b> none counted yet. They're read from Claude Code's own session transcripts (in <code>~/.claude/projects</code>) once the run's session has written them.`;
+    return;
+  }
+  const t = u.tokens, cw = t.cache_write_5m + t.cache_write_1h;
+  const models = u.models.map(m => `${esc(m.name)} ($${m.price ? m.price.in : '?'} in / $${m.price ? m.price.out : '?'} out per M)`).join(', ');
+  box.innerHTML = `<span class="cost-big">$${u.cost.toFixed(2)}</span> at API prices
+    <span class="tok">input <b>${fmtTok(t.input)}</b> · output <b>${fmtTok(t.output)}</b> · cache read <b>${fmtTok(t.cache_read)}</b> · cache write <b>${fmtTok(cw)}</b></span>
+    <span class="note">${models}${u.agents ? ` · ${u.agents} sub-agent transcripts` : ''}. What these tokens would cost on the Anthropic API; on a Claude plan you aren't billed per token.</span>`;
+}
+async function pollUsage(id) {
+  try {
+    const u = await getJSON('api/usage?id=' + encodeURIComponent(id));
+    if (!player.run || player.run.run !== id) return;
+    renderUsage(u);
+    $('stopBtn').hidden = !u.stoppable;
+    if (u.stopped && !player.run.stopped) { player.run.stopped = true; player.status('This contest was stopped.'); }
+    if (u.build && !lookChosen && u.build !== player.buildMode) {
+      lookChosen = true; player.buildMode = u.build; setBuildSeg();
+      player.seek(player.evClock).then(() => duel.m && openFight(duel.m, false));
+    }
+    if (player.run.done || u.stopped) clearInterval(usageTimer);
+  } catch { /* the server may be busy; try again */ }
+}
+function renderClaude(entries) {
+  const ol = $('claudeLog');
+  const key = entries.length ? entries[0].t + entries[0].text : '';
+  if (key !== claudeKey) { logClear(ol); claudeKey = key; claudeShown = 0; }
+  const tagFor = e => e.kind === 'say' ? tag('SAY', 'CLAUDE') : e.kind === 'user' ? tag('USER', 'YOU')
+    : e.kind === 'tool' ? tag('TOOL', esc(e.tool || 'TOOL').toUpperCase()) : tag(e.error ? 'ERR' : 'RES', e.error ? 'ERROR' : 'RESULT');
+  for (const e of entries.slice(claudeShown)) {
+    const t = e.t ? new Date(e.t).toLocaleTimeString([], { hour12: false }) : '';
+    logRow(ol, `<time>${t}</time>${tagFor(e)}${esc(e.text)}`, e.kind === 'result' ? 'dim' : e.kind === 'say' ? 'sys' : '');
+  }
+  claudeShown = entries.length;
+  if (!entries.length) renderClaudeEmpty();
+}
+async function pollClaude(id) {
+  try {
+    const r = await getJSON('api/claude?id=' + encodeURIComponent(id));
+    if (!player.run || player.run.run !== id) return;
+    if (r.found) renderClaude(r.entries);
+    else { $('claudeLog').dataset.empty = 'No Claude Code session for this run found yet. The log appears once its transcript exists in ~/.claude/projects.'; }
+    if (player.run.done || player.run.stopped) clearInterval(claudeTimer);
+  } catch { /* try again */ }
+}
+function followUsage(id) {
+  pollUsage(id); pollClaude(id);
+  usageTimer = setInterval(() => pollUsage(id), 4000);
+  claudeTimer = setInterval(() => pollClaude(id), 2500);
+}
+let stopArmed = 0;
+$('stopBtn').onclick = async () => {
+  const b = $('stopBtn');
+  if (Date.now() - stopArmed > 4000) { stopArmed = Date.now(); b.textContent = 'Click again to stop it'; setTimeout(() => { b.textContent = 'Stop the contest'; }, 4000); return; }
+  b.disabled = true;
+  try {
+    const r = await fetch('api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Arena-Token': api.config.token }, body: '{}' });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.error);
+    player.run.stopped = true; b.hidden = true;
+    player.status('Contest stopped. Claude Code and its sub-agents were ended; the files written so far stay in .arena/.');
+  } catch (e) { player.status(e.message); }
+  b.disabled = false; b.textContent = 'Stop the contest';
+};
+// feed tabs
+for (const t of document.querySelectorAll('.tabs [data-tab]')) t.onclick = () => {
+  for (const o of document.querySelectorAll('.tabs [data-tab]')) { o.setAttribute('aria-selected', String(o === t)); $(o.dataset.tab).closest('.logbox').hidden = o !== t; }
+};
+setupLog($('feed')); setupLog($('claudeLog'));
+$('claudeLog').closest('.logbox').hidden = true; $('claudeLog').hidden = false;
+setupLog(document.querySelector('#fcA .log')); setupLog(document.querySelector('#fcB .log'));
+
+// ================================================================ full screen
+/** Size each game canvas to fill its stage when the stage is full screen (letterboxed). */
+function fitStages() {
+  for (const [stageId, canvasId] of [['arenaStage', 'arena'], ['duelStage', 'duel']]) {
+    const st = $(stageId), cv = $(canvasId);
+    const full = document.fullscreenElement === st || st.classList.contains('immersive');
+    st.classList.toggle('full', full);
+    if (full) {
+      const k = Math.min(st.clientWidth / cv.width, st.clientHeight / cv.height);
+      cv.style.width = Math.floor(cv.width * k) + 'px'; cv.style.height = Math.floor(cv.height * k) + 'px';
+    } else { cv.style.width = ''; cv.style.height = ''; }
+  }
+}
+function toggleFullscreen(id) {
+  const el = $(id);
+  if (document.fullscreenElement) { document.exitFullscreen(); return; }
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => { el.classList.toggle('immersive'); fitStages(); });
+  else { el.classList.toggle('immersive'); fitStages(); }
+}
+for (const b of document.querySelectorAll('.fsbtn')) b.onclick = () => toggleFullscreen(b.dataset.fs);
+document.addEventListener('fullscreenchange', () => requestAnimationFrame(fitStages));
+window.addEventListener('resize', fitStages);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') for (const id of ['arenaStage', 'duelStage']) if ($(id).classList.contains('immersive') && !$(id).closest('#game')) { $(id).classList.remove('immersive'); fitStages(); } });
