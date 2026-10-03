@@ -1,0 +1,37 @@
+name: Release
+
+# Push a tag like v0.1.0 to publish a release with the standalone page and a source zip.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check
+        run: |
+          python -m py_compile viewer.py tools/*.py
+          python tools/make_fixture.py --agents 8 --seed 1 --out "$RUNNER_TEMP/fx"
+          python viewer.py --export "$(ls -d "$RUNNER_TEMP"/fx/.arena/run-*)" > "$RUNNER_TEMP/run.json"
+          python -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['done'] and d['champion'], 'export incomplete'" "$RUNNER_TEMP/run.json"
+      - name: Build
+        run: |
+          python tools/bundle_app.py
+          git archive --format=zip --prefix=the-arena/ -o "dist/the-arena-${GITHUB_REF_NAME}.zip" HEAD
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          [ -f "$notes" ] || notes=/dev/null
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/the-arena.html" "dist/the-arena-${GITHUB_REF_NAME}.zip" \
+            --title "The Arena ${GITHUB_REF_NAME}" --notes-file "$notes"
