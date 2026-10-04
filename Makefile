@@ -67,7 +67,7 @@ check: ## Compile the Python, play a fake tournament, export it, and parse the a
 	@$(PY) viewer.py --export "$$(ls -d $(DEV)/check/.arena/run-*)" > $(DEV)/check/run.json
 	@$(PY) -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['done'] and d['champion']; print('export ok: champion', d['champion'])" $(DEV)/check/run.json
 	@if command -v node > /dev/null; then \
-	  node -e "const fs=require('fs');const src=['sprites','engine','player','duel','main','game'].map(f=>fs.readFileSync('app/'+f+'.js','utf8')).join('\n');new Function(src);console.log('app scripts parse')"; \
+	  node -e "const fs=require('fs');const src=['audio','sprites','engine','player','duel','main','game'].map(f=>fs.readFileSync('app/'+f+'.js','utf8')).join('\n');new Function(src);console.log('app scripts parse')"; \
 	else echo "node not found: skipped the script parse check"; fi
 
 install-skill: ## Copy the vendored /arena skill to ~/.claude/skills/arena (SKILL_DIR to change)

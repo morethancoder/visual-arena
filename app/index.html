@@ -16,6 +16,7 @@
   <a class="brand" href="#/">The Arena</a>
   <span class="crumb" id="crumb"></span>
   <span class="spacer"></span>
+  <button type="button" class="soundbtn" data-sound aria-haspopup="dialog" aria-label="Sound settings">♪ Sound</button>
   <button type="button" class="gamebtn" id="enterGame">Enter the colosseum</button>
   <span class="conn" id="conn"></span>
 </header>
@@ -215,6 +216,7 @@
         </div>
       </div>
       <div class="gbar">
+        <button type="button" data-sound aria-haspopup="dialog">♪ Sound</button>
         <button type="button" id="gDemo">Watch a demo</button>
         <button type="button" id="gExit">Leave the colosseum</button>
       </div>
@@ -226,12 +228,24 @@
     <div class="gbar run">
       <button type="button" id="gArena">The arena</button>
       <button type="button" id="gFight">The fight</button>
+      <button type="button" data-sound aria-haspopup="dialog">♪ Sound</button>
       <button type="button" id="gBack">Back to the throne</button>
       <button type="button" id="gExit2">Leave the colosseum</button>
     </div>
   </div>
 </div>
 
+<div class="soundpanel" id="soundPanel" role="dialog" aria-label="Sound settings" hidden>
+  <h3>Sound</h3>
+  <label class="row"><input type="checkbox" id="sfxOn"> Sound effects</label>
+  <input type="range" id="sfxVol" min="0" max="100" aria-label="Sound effects volume">
+  <label class="row"><input type="checkbox" id="musicOn"> Music</label>
+  <input type="range" id="musicVol" min="0" max="100" aria-label="Music volume">
+  <span class="label">Track</span>
+  <div class="seg" id="trackSeg"></div>
+  <p class="note" id="soundNote"></p>
+</div>
+<script src="audio.js"></script>
 <script src="sprites.js"></script>
 <script src="engine.js"></script>
 <script src="player.js"></script>

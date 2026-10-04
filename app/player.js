@@ -7,6 +7,7 @@ class RunPlayer extends Engine {
     this.overlay = overlay; this.statusEl = statusEl; this.feedEl = feedEl;
     this.variant = 'oval'; this.buildMode = 'sonnet'; this.names = false;
     this.alwaysStep = true; // keep reading files while scrolled away: the fight view depends on it
+    this.vol = .45;
     const oval = ovalBackground(400, 250);
     Object.assign(oval, {
       centre() { return { x: this.cx, y: this.cy }; },
@@ -233,7 +234,7 @@ class RunPlayer extends Engine {
   onSpawn(f) { f.spawned = true; if (this.instant || f.atCrate) this.equip(f); return Promise.resolve(); }
   equip(f) {
     f.weapon = STARTERS[strHash(f.id) % STARTERS.length]; f.crate.taken = true;
-    if (!this.instant) { this.burst(f.crate.x, f.crate.y - 4, C.gold, 6, 30, 400); this.setAnim(f, 'idle', true); } else f.anim = 'idle';
+    if (!this.instant) { this.burst(f.crate.x, f.crate.y - 4, C.gold, 6, 30, 400); this.setAnim(f, 'idle', true); this.snd('coin', { v: .4, gap: 120 }); } else f.anim = 'idle';
     f.busy = false; f.idleUntil = this.time + rand(200, 900);
   }
   /** A place at the edge of the sand for the k-th body, away from where the fights happen. */
@@ -275,7 +276,7 @@ class RunPlayer extends Engine {
     if (!this.instant && n > 1) { await Promise.all(this.run.rounds[n - 2].matches.map(m => m.chain || Promise.resolve())); await this.wait(400); }
     await this.clearBodies();
     this.openRound = n;
-    this.banner(`Round ${n}`);
+    this.banner(`Round ${n}`); this.snd('horn', { v: 1.6, gap: 1000 });
     const first = this.timeline.find(t => this.matchById[t.ev[2]] && this.matchById[t.ev[2]].round === n);
     logRow(this.feedEl, `<time>${clock(first ? first.ev[0] : 0)}</time>${tag('ROUND', 'ROUND ' + n)} ${rd.matches.length * 2 + (rd.bye ? 1 : 0)} fighters, ${rd.matches.length} fights${rd.bye ? `, ${esc(rd.bye)} has a bye` : ''}`, 'sys');
     const spots = gridSpots(this.map, rd.matches.length, 12, n + 7);
@@ -312,18 +313,19 @@ class RunPlayer extends Engine {
     if (wp.kind === 'melee') {
       const reach = (BUILDS[A.build].w + BUILDS[D.build].w) / 2 + 3, d = A.dir;
       await this.moveTo(A, D.x - A.dir * reach, D.y, 85, 'charge'); if (!live()) return;
-      this.setAnim(A, 'swing', true, 360); await this.wait(120); if (!live()) return;
-      this.hit(D, A, atk);
+      this.setAnim(A, 'swing', true, 360); this.snd('whoosh', { v: .6 }); await this.wait(120); if (!live()) return;
+      this.hit(D, A, atk, wp);
       await this.wait(240); if (!live()) return;
       await this.moveTo(A, A.home.x, A.home.y, 55, 'walk', false); A.dir = d;
     } else {
-      this.setAnim(A, 'throw', true, 300); await this.wait(150); if (!live()) return;
+      this.setAnim(A, 'throw', true, 300); this.snd(wp.name === 'fireball' ? 'fire' : 'whoosh', { v: .5 }); await this.wait(150); if (!live()) return;
       await this.throwAt(A, D, wp); if (!live()) return;
-      this.hit(D, A, atk);
+      this.hit(D, A, atk, wp);
     }
   }
-  hit(D, A, atk) {
+  hit(D, A, atk, wp) {
     D.dir = A.x > D.x ? 1 : -1;
+    this.snd('hit', { tier: atk.tier, kind: wp ? woundKind(wp) : 'cut' });
     this.setAnim(D, 'hurt', true, 300); D.hp = Math.max(4, D.hp - DMG[atk.tier]);
     this.burst(D.x, D.y - heightOf(D) / 2, TIERC[atk.tier], atk.tier === 'FATAL' ? 16 : 7, 55, 450);
     if (atk.tier === 'FATAL') this.shake = 240;
@@ -334,8 +336,8 @@ class RunPlayer extends Engine {
     const gen = this.gen, live = () => gen === this.gen;
     for (let i = 0; i < took.length; i++) {
       const st = (def[i] || {}).stance || 'CONCEDE';
-      if (st === 'REBUT') { this.setAnim(f, 'block', true, 420); this.burst(f.x + f.dir * 7, f.y - heightOf(f) / 2, C.spark, 6, 45, 300); }
-      else { this.setAnim(f, 'heal', true, 600); this.burst(f.x, f.y - heightOf(f), C.heal, 4, 25, 400, -20); }
+      if (st === 'REBUT') { this.setAnim(f, 'block', true, 420); this.snd('clang', { v: .7 }); this.burst(f.x + f.dir * 7, f.y - heightOf(f) / 2, C.spark, 6, 45, 300); }
+      else { this.setAnim(f, 'heal', true, 600); this.snd('heal', { v: .7 }); this.burst(f.x, f.y - heightOf(f), C.heal, 4, 25, 400, -20); }
       f.hp = Math.min(100, f.hp + DMG[took[i].tier]);
       await this.wait(st === 'REBUT' ? 460 : 640); if (!live()) return;
     }
@@ -351,7 +353,7 @@ class RunPlayer extends Engine {
     const gen = this.gen, live = () => gen === this.gen;
     const st = this.map.stand(m.spot.x, m.spot.y);
     const judge = { x: Math.round(st.x), y: Math.round(st.y), until: this.time + 4200, look: JUDGE_LOOK(strHash(m.id)), sign: null };
-    this.judges.push(judge);
+    this.judges.push(judge); this.snd('crowd', { v: .7, gap: 400 });
     await this.wait(450); if (!live()) return;
     for (const f of [this.fighter(m.a), this.fighter(m.b)]) for (const title of (m.standing[f.id] || [])) {
       this.setAnim(f, 'hurt', true, 300); f.hp = Math.max(4, f.hp - DMG[tierOf(m, f.id, title)]);
@@ -362,19 +364,19 @@ class RunPlayer extends Engine {
     await this.wait(700); if (!live()) return;
     this.flights.push({ x0: judge.x + 5, y0: judge.y - 32, f: W, t0: this.time, dur: 800 });
     await this.wait(800); if (!live()) return;
-    W.laurel = true; this.burst(W.x, W.y - heightOf(W) - 3, C.leaf, 8, 30, 400);
+    W.laurel = true; this.burst(W.x, W.y - heightOf(W) - 3, C.leaf, 8, 30, 400); this.snd('chime', { v: .7 });
     await this.wait(500); if (!live()) return;
     W.atkW = bigWeapon(m.id);
     const d = W.dir;
     await this.moveTo(W, L.x - W.dir * 10, L.y, 95, 'charge'); if (!live()) return;
     this.setAnim(W, 'swing', true, 400); await this.wait(125); if (!live()) return;
-    L.alive = false; L.inFight = false; L.cause = cause; L.skull = m.fatal[L.id]; this.setAnim(L, 'dead', true);
+    L.alive = false; L.inFight = false; L.cause = cause; L.skull = m.fatal[L.id]; this.setAnim(L, 'dead', true); this.snd('death');
     this.burst(L.x, L.y - 5, '#e0483c', 14, 60, 600); this.shake = 220;
     await this.wait(450); if (!live()) return;
     await this.moveTo(W, L.x - d * 10, L.y, 26, 'walk'); if (!live()) return;
     W.dir = L.x > W.x ? 1 : -1;
     this.setAnim(W, 'loot', true); await this.wait(800); if (!live()) return;
-    W.pips += Math.max(1, m.survived.length); this.burst(W.x, W.y - 14, C.gold, 8, 35, 500);
+    W.pips += Math.max(1, m.survived.length); this.burst(W.x, W.y - 14, C.gold, 8, 35, 500); this.snd('coin', { v: .8 });
     W.inFight = false; W.match = null; W.hp = 100; this.setAnim(W, 'idle'); W.busy = false; W.idleUntil = this.time + 400;
   }
   async openFinal() {
@@ -384,7 +386,7 @@ class RunPlayer extends Engine {
     this.ghost = { id: 'the rejected answer', build: champ.build, color: '#ece6d8', ghost: true, x: gates[1].x, y: gates[1].y, dir: -1, anim: 'walk', animT: 0, alive: true, busy: true, hp: 100, pips: 0 };
     this.fighters.push(this.ghost);
     champ.busy = true; champ.laurel = false;
-    this.banner('The final check');
+    this.banner('The final check'); this.snd('horn', { v: 1.6, gap: 1000 });
     await Promise.all([this.go(champ, c.x - 12, c.y, 40), this.go(this.ghost, c.x + 12, c.y, 30)]);
     champ.dir = 1; this.ghost.dir = -1; champ.inFight = this.ghost.inFight = true;
   }
@@ -411,7 +413,7 @@ class RunPlayer extends Engine {
     if (!champ) return;
     this.champion = champ; champ.busy = true; champ.inFight = false;
     if (instant) { champ.anim = 'victory'; return; }
-    this.banner(`${champ.id} is champion`);
+    this.banner(`${champ.id} is champion`); this.snd('fanfare', { v: 1.8 }); setTimeout(() => this.snd('cheer', { v: 1.8 }), 600);
     this.setAnim(champ, 'victory', true);
     for (let i = 0; i < 5; i++) this.wait(i * 600).then(() => this.burst(champ.x, champ.y - 14, pickOf([C.gold, C.white, '#c2453d', '#5b7fbf']), 10, 60, 900, 40));
   }

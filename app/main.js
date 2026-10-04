@@ -367,6 +367,7 @@ $('fileIn').addEventListener('change', async e => {
 // ================================================================ routing
 function show(id) {
   for (const s of ['lobby', 'arenaScreen']) $(s).hidden = s !== id;
+  if (!(typeof game !== 'undefined' && game.on)) music.play(id === 'lobby' ? 'throne' : 'battle');
   if (id !== 'arenaScreen') { player.paused = true; duel.paused = true; }
 }
 function setConn(on) {
@@ -519,3 +520,39 @@ for (const b of document.querySelectorAll('.fsbtn')) b.onclick = () => toggleFul
 document.addEventListener('fullscreenchange', () => requestAnimationFrame(fitStages));
 window.addEventListener('resize', fitStages);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') for (const id of ['arenaStage', 'duelStage']) if ($(id).classList.contains('immersive') && !$(id).closest('#game')) { $(id).classList.remove('immersive'); fitStages(); } });
+
+// ================================================================ sound settings
+(function soundPanel() {
+  const panel = $('soundPanel');
+  const sync = () => {
+    $('sfxOn').checked = soundSettings.sfx; $('musicOn').checked = soundSettings.music;
+    $('sfxVol').value = Math.round(soundSettings.sfxVol * 100); $('musicVol').value = Math.round(soundSettings.musicVol * 100);
+    $('sfxVol').disabled = !soundSettings.sfx; $('musicVol').disabled = !soundSettings.music;
+    $('soundNote').textContent = audio.ctx && audio.ctx.state === 'running' ? '' : 'Sound starts after your first click on the page.';
+  };
+  const changed = () => { saveSound(); audio.init(); audio.apply(); music.play(music.wanted); sync(); };
+  $('sfxOn').onchange = e => { soundSettings.sfx = e.target.checked; changed(); sfx('clang', { v: .6 }); };
+  $('musicOn').onchange = e => { soundSettings.music = e.target.checked; changed(); };
+  $('sfxVol').oninput = e => { soundSettings.sfxVol = e.target.value / 100; changed(); };
+  $('sfxVol').onchange = () => sfx('hit', { tier: 'MAJOR', kind: 'cut', gap: 0 });
+  $('musicVol').oninput = e => { soundSettings.musicVol = e.target.value / 100; changed(); };
+  seg('trackSeg', [['auto', 'Auto'], ['throne', 'Throne room'], ['battle', 'Battle']], soundSettings.track, v => { soundSettings.track = v; changed(); });
+  let opener = null;
+  const close = () => { panel.hidden = true; if (opener) opener.setAttribute('aria-expanded', 'false'); };
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-sound]');
+    if (b) {
+      if (!panel.hidden && opener === b) { close(); return; }
+      opener = b; b.setAttribute('aria-expanded', 'true');
+      (document.fullscreenElement || (game.on ? $('game') : document.body)).append(panel);
+      panel.hidden = false; sync();
+      const r = b.getBoundingClientRect(), w = panel.offsetWidth, h = panel.offsetHeight;
+      panel.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + 'px';
+      panel.style.top = (r.bottom + h + 8 > innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
+      return;
+    }
+    if (!panel.hidden && !panel.contains(e.target)) close();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panel.hidden) close(); });
+  sync();
+})();

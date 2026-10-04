@@ -10,7 +10,7 @@ class ThroneScene extends Engine {
     super(canvas, 320, 180, 4);
     this.bg = panoramaBackground(320, 180, { floor: 98, tierH: 24, tiers: 3, top: 14, archW: 16, gateX: [34, 286] });
     this.king = { x: 160, y: 86, arm: false };
-    this.build = 'sonnet'; this.target = 16; this.made = 0; this.paused = true;
+    this.build = 'sonnet'; this.target = 16; this.made = 0; this.paused = true; this.vol = .8;
   }
   background() { return this.bg.frames[Math.floor(this.time / 450) % 2]; }
   spot() { return { x: rand(20, 300), y: rand(110, 172) }; }
@@ -23,14 +23,14 @@ class ThroneScene extends Engine {
       const k = this.made++, g = k % 2 ? { x: 286, y: 104 } : { x: 34, y: 104 };
       const f = { id: 'n' + k, build: this.build, color: CLIST[k % CLIST.length], x: g.x, y: g.y + rand(-2, 2), dir: k % 2 ? -1 : 1,
         anim: 'walk', animT: rand(0, 500), alive: true, busy: true, weapon: STARTERS[k % 4], idleUntil: 0 };
-      this.fighters.push(f);
+      this.fighters.push(f); this.snd('click', { gap: 30 });
       const p = this.spot();
       this.wait(Math.max(0, i - here.length) * 60).then(() => this.moveTo(f, p.x, p.y, rand(40, 60), 'walk').then(() => { f.busy = false; }));
     }
     for (let i = here.length - 1; i >= want; i--) {
       const f = here[i], g = this.gate(f.x);
       f.leaving = true; f.busy = true;
-      this.burst(f.x, f.y - 6, C.dust, 4, 20, 300);
+      this.burst(f.x, f.y - 6, C.dust, 4, 20, 300); this.snd('whoosh', { v: .3, gap: 40 });
       this.moveTo(f, g.x, g.y, 70, 'walk').then(() => { const j = this.fighters.indexOf(f); if (j >= 0) this.fighters.splice(j, 1); });
     }
   }
@@ -53,7 +53,7 @@ class ThroneScene extends Engine {
     if (k.arm) { R(k.x + 4, k.y - 22, 4, 6, C.white); R(k.x + 4, k.y - 22, 4, 1, C.goldD); R(k.x + 4, k.y - 17, 4, 1, C.goldD); R(k.x + 5, k.y - 20, 2, 2, C.red); }
   }
   async celebrate() {
-    this.king.arm = true;
+    this.king.arm = true; this.snd('fanfare', { v: 1.6 }); setTimeout(() => this.snd('cheer', { v: 1.6 }), 700);
     for (const f of this.fighters) { f.busy = true; f.move = null; this.setAnim(f, 'victory', true); }
     for (let i = 0; i < 6; i++) this.wait(i * 250).then(() => this.burst(rand(40, 280), rand(40, 80), pickOf([C.gold, C.white, '#c2453d', '#5b7fbf', C.leaf]), 14, 50, 1200, 30));
     await this.wait(1800);
@@ -129,6 +129,7 @@ const game = (() => {
     $('decree').classList.remove('sealed'); $('gHerald').hidden = true; $('gNote').textContent = '';
     scene.setBuild(modelInfo(launchModel).build); scene.target = agents; scene.sync();
     renderRoster(); renderPast();
+    music.play('throne');
     requestAnimationFrame(fitThrone);
   }
   function showRun(which = 'arena') {
@@ -136,6 +137,7 @@ const game = (() => {
     $('gThrone').hidden = true; $('gRun').hidden = false;
     for (const id of ['arenaStage', 'duelStage']) { const el = park(id); $('gSlot').append(el); el.classList.add('immersive'); }
     $('arenaStage').hidden = which !== 'arena'; $('duelStage').hidden = which !== 'fight';
+    music.play('battle');
     $('gArena').setAttribute('aria-pressed', String(which === 'arena')); $('gFight').setAttribute('aria-pressed', String(which === 'fight'));
     requestAnimationFrame(fitStages);
   }
@@ -155,6 +157,7 @@ const game = (() => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     for (const id of ['arenaStage', 'duelStage']) unpark(id);
     scene.paused = true; G.hidden = true; document.body.classList.remove('in-game');
+    music.play($('lobby').hidden ? 'battle' : 'throne');
     fitStages();
   }
 
@@ -220,7 +223,7 @@ const game = (() => {
   $('gSeal').onclick = seal;
   $('gLess').onclick = () => setCount(agents - 1);
   $('gMore').onclick = () => setCount(agents + 1);
-  $('gTask').addEventListener('input', () => { $('task').value = $('gTask').value; store.set('draft', $('gTask').value); });
+  $('gTask').addEventListener('input', () => { sfx('quill', { gap: 55 }); $('task').value = $('gTask').value; store.set('draft', $('gTask').value); });
   document.addEventListener('fullscreenchange', () => { if (on && !document.fullscreenElement) exit(); requestAnimationFrame(() => { fitThrone(); fitStages(); }); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && on && !document.fullscreenElement) exit(); });
   window.addEventListener('resize', fitThrone);

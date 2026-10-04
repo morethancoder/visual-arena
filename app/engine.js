@@ -14,6 +14,11 @@ class Engine {
     requestAnimationFrame(ts => this.frame(ts));
   }
   clear() { this.gen++; this.time = 0; this.timers = []; this.fighters = []; this.extras = []; this.proj = []; this.parts = []; this.shake = 0; }
+  /** Play a sound for this scene: skipped while seeking, while paused, or when the scene is off screen. */
+  snd(name, opts = {}) {
+    if (this.instant || this.I || !this.visible || this.paused) return;
+    sfx(name, Object.assign({}, opts, { v: (opts.v == null ? 1 : opts.v) * (this.vol || 1) }));
+  }
   wait(ms) { const gen = this.gen; return new Promise(res => this.timers.push({ at: this.time + ms, res, gen })); }
   setAnim(f, a, force, ms) { if (f.anim !== a || force) { f.anim = a; f.animT = 0; } f.animUntil = ms ? this.time + ms : 0; }
   moveTo(f, x, y, speed = 40, anim = 'walk', face = true) {
@@ -244,6 +249,11 @@ function logBottom(ol) {
   if (st) requestAnimationFrame(() => { st.programmatic = false; });
 }
 function logClear(ol) { ol.innerHTML = ''; const st = ol._log; if (st) { st.follow = true; st.unseen = 0; st.show(); } }
+/** What a weapon leaves behind: cuts, bruises, a stuck knife or javelin, or scorch. */
+function woundKind(wp) {
+  if (wp.kind === 'throw') return wp.name === 'fireball' ? 'scorch' : wp.name === 'javelin' ? 'javelin' : 'knife';
+  return ['mace', 'warhammer', 'flail'].includes(wp.name) ? 'bruise' : ['greatsword', 'axe'].includes(wp.name) ? 'slash' : 'cut';
+}
 function logRow(ol, html, cls, onClick) {
   const st = setupLog(ol);
   const li = document.createElement('li'); li.innerHTML = html; if (cls) li.className = cls;

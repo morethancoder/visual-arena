@@ -25,6 +25,10 @@ pixel-art colosseum you can watch live, leave, and come back to.
   the viewer reads Claude Code's own session transcripts (`~/.claude/projects`) for the tokens used
   so far and what they would cost at Anthropic API prices, and shows a live log of what the Claude
   running the skill is doing (the *Claude Code* tab).
+- **Sound and music**: effects for every swing, hit, shield, heal, judge, fall and cheer, and two
+  medieval loops (the throne room and the battle), all synthesised in the browser with no audio
+  files. The ♪ Sound button turns effects and music on or off, sets their volumes and picks the
+  track; the settings are remembered.
 - **Stop**: a contest started from the viewer can be stopped from the run screen; that ends Claude
   Code and every sub-agent it started. A run you started yourself stops from Claude Code (Esc).
 

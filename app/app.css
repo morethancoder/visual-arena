@@ -168,3 +168,17 @@ button.danger { background: #d6372b; color: #fff; }
 .tips ul { margin: 4px 0 0; padding-left: 20px; }
 .tips li { margin: 4px 0; }
 .tips b { color: var(--text); }
+
+/* ---------------------------------------------------------------- sound */
+.soundbtn { background: transparent; color: var(--text); border-color: var(--line); box-shadow: none; white-space: nowrap; }
+.soundpanel {
+  position: fixed; z-index: 80; width: 300px; padding: 12px 14px; display: grid; gap: 6px;
+  background: var(--panel); color: var(--text); border: 2px solid #000; outline: 2px solid var(--line); box-shadow: 4px 4px 0 #000;
+  font-family: var(--ui);
+}
+.soundpanel h3 { margin: 0 0 2px; font-family: var(--display); font-weight: 400; font-size: 28px; color: var(--gold); }
+.soundpanel .row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin-top: 4px; }
+.soundpanel input[type=range] { width: 100%; accent-color: var(--gold); }
+.soundpanel .seg { width: fit-content; }
+.soundpanel .note { margin: 0; font-size: 13px; }
+@media (max-width: 640px) { .soundbtn { padding: 7px 8px; } .gamebtn { display: none; } }

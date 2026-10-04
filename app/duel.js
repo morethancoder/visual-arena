@@ -10,7 +10,7 @@ class Duel extends Engine {
   constructor(canvas, overlay, status, source) {
     super(canvas, 200, 100, 5);
     this.overlay = overlay; this.statusEl = status; this.source = source;
-    this.alwaysStep = true;
+    this.alwaysStep = true; this.vol = 1;
     this.bg = panoramaBackground(200, 100, { floor: 58, tierH: 22, tiers: 2, top: 4, archW: 14, gateX: [] });
     this.cards = { A: document.getElementById('fcA'), B: document.getElementById('fcB') };
     canvas.addEventListener('mousemove', e => this.hover(e));
@@ -173,14 +173,14 @@ class Duel extends Engine {
     this.chip('replay');
     const W = m.winner === A.id ? A : B, L = W === A ? B : A, jk = 'judge:' + m.id;
     this.judge = { x: 100, look: JUDGE_LOOK(strHash(m.id)), sign: null };
-    this.both(`${tag('JUDGE')}The judge of ${m.id} stands and checks every attack`, 'sys', jk);
+    this.both(`${tag('JUDGE')}The judge of ${m.id} stands and checks every attack`, 'sys', jk); this.snd('crowd');
     this.status(`The judge of ${m.id} checks every attack.`);
     await this.delay(1200); if (!live()) return;
     for (const f of [A, B]) for (const t of (m.standing[f.id] || [])) {
       const opp = f === A ? m.b : m.a, idx = (m.atk[opp] || []).findIndex(x => x.title === t), tier = tierOf(m, f.id, t);
       if (idx >= 0 && f.lodged[idx]) f.lodged[idx].state = 'standing';
       this.log(f, `${tag('STANDING')}${q(t)} still stands: the rebuttal didn't hold`, '', jk);
-      this.act(f, 'hurt', 300); f.hp = Math.max(4, f.hp - DMG[tier]);
+      this.act(f, 'hurt', 300); f.hp = Math.max(4, f.hp - DMG[tier]); this.snd('hit', { tier, kind: 'cut' });
       this.fx(() => { this.burst(f.x, f.y - 8, '#e0483c', 10, 50, 500); this.shake = 180; });
       await this.delay(1500); if (!live()) return;
     }
@@ -190,16 +190,16 @@ class Duel extends Engine {
     await this.delay(900); if (!live()) return;
     if (!this.I) this.flight = { x0: 105, y0: 18, f: W, t0: this.time, dur: 900 };
     await this.delay(900); if (!live()) return;
-    W.laurel = true; this.state(W, 'winner');
+    W.laurel = true; this.state(W, 'winner'); this.snd('chime'); this.snd('cheer', { v: .7 });
     this.banner(`${W.id} wins`);
     await this.delay(1800); if (!live()) return;
-    this.banner('Finish him!', true);
+    this.banner('Finish him!', true); this.snd('horn');
     await this.delay(1200); if (!live()) return;
     W.atkW = bigWeapon(m.id);
     await this.go(W, L.x - W.dir * 16, L.y, 110, 'charge'); if (!live()) return;
     this.act(W, 'swing', 600); await this.delay(125); if (!live()) return;
     this.fx(() => { this.shake = 450; this.burst(L.x, L.y - 8, '#e0483c', 26, 80, 800); this.burst(L.x, L.y - 8, C.white, 10, 60, 300); });
-    L.hp = 0; L.alive = false; L.lodged = []; this.act(L, 'dead'); this.state(L, 'fallen');
+    L.hp = 0; L.alive = false; L.lodged = []; this.act(L, 'dead'); this.state(L, 'fallen'); this.snd('death', { v: 1.3 }); this.snd('crowd', { v: .8 });
     this.log(W, `${tag('FALL', 'FINISH')}finishes ${this.name(L)} with a ${W.atkW.name}`, '', jk);
     this.log(L, `${tag('FALL', 'FALLEN')}falls in round ${m.round}`, '', jk);
     await this.delay(1100); if (!live()) return;
@@ -209,12 +209,12 @@ class Duel extends Engine {
     W.dir = L.x > W.x ? 1 : -1;
     this.act(W, 'loot');
     for (const s of (m.survived.length ? m.survived : ['the win itself'])) {
-      this.log(W, `${tag('LOOT')}takes the fix for ${q(s)}`, '', jk);
+      this.log(W, `${tag('LOOT')}takes the fix for ${q(s)}`, '', jk); this.snd('coin');
       this.fx(() => this.burst(L.x, L.y - 6, C.gold, 8, 30, 500));
       await this.delay(1100); if (!live()) return;
     }
     W.hp = 100; W.lodged = [];
-    this.act(W, 'victory'); await this.delay(1300); if (!live()) return;
+    this.act(W, 'victory'); this.snd('cheer', { v: .5 }); await this.delay(1300); if (!live()) return;
     this.status(`${W.id} wanders off to wait for round ${m.round + 1}. Hover the body to see what killed ${L.id}.`);
     await this.go(W, W.x < 100 ? 26 : 174, 90, 18, 'walk'); if (!live()) return;
     this.I = false;
@@ -243,10 +243,10 @@ class Duel extends Engine {
     for (let i = 0; i < took.length; i++) {
       const d = def[i] || { stance: 'CONCEDE', answer: '' }, w = f.lodged[i];
       if (d.stance === 'REBUT') {
-        this.act(f, 'block', 700); this.fx(() => this.burst(f.x + f.dir * 8, f.y - heightOf(f) / 2, C.spark, 10, 50, 350));
+        this.act(f, 'block', 700); this.snd('clang'); this.fx(() => this.burst(f.x + f.dir * 8, f.y - heightOf(f) / 2, C.spark, 10, 50, 350));
         this.log(f, `${tag('REBUT')}blocks ${q(took[i].title)}: ${esc(d.answer)}`, '', k);
       } else {
-        this.act(f, 'heal', 1200); this.fx(() => this.burst(f.x, f.y - 12, C.heal, 8, 30, 500, -20));
+        this.act(f, 'heal', 1200); this.snd('heal'); this.fx(() => this.burst(f.x, f.y - 12, C.heal, 8, 30, 500, -20));
         this.log(f, `${tag('CONCEDE')}fixes ${q(took[i].title)}: ${esc(d.answer)}`, '', k);
       }
       if (w) w.state = 'gone';
@@ -257,11 +257,9 @@ class Duel extends Engine {
   async strike(att, def, atk, wp, i) {
     const gen = this.gen, live = () => gen === this.gen;
     att.atkW = wp;
-    const kind = wp.kind === 'throw'
-      ? (wp.name === 'fireball' ? 'scorch' : wp.name === 'javelin' ? 'javelin' : 'knife')
-      : (['mace', 'warhammer', 'flail'].includes(wp.name) ? 'bruise' : ['greatsword', 'axe'].includes(wp.name) ? 'slash' : 'cut');
+    const kind = woundKind(wp);
     const lodge = () => {
-      this.act(def, 'hurt', 300); def.hp = Math.max(4, def.hp - DMG[atk.tier]);
+      this.act(def, 'hurt', 300); def.hp = Math.max(4, def.hp - DMG[atk.tier]); this.snd('hit', { tier: atk.tier, kind });
       def.lodged[i] = { kind, ox: 1 + (strHash(atk.title + i) % 5), oy: 1 + (strHash(atk.title) % Math.max(2, heightOf(def) - 4)), state: 'stuck' };
       this.fx(() => {
         this.burst(def.x, def.y - heightOf(def) / 2, TIERC[atk.tier], atk.tier === 'FATAL' ? 22 : 10, 60, 500);
@@ -272,12 +270,12 @@ class Duel extends Engine {
     if (wp.kind === 'melee') {
       const reach = (BUILDS[att.build].w + BUILDS[def.build].w) / 2 + 4, d = att.dir;
       await this.moveTo(att, def.x - att.dir * reach, def.y, 95, 'charge'); if (!live()) return;
-      this.setAnim(att, 'swing', true, 420); await this.wait(125); if (!live()) return;
+      this.setAnim(att, 'swing', true, 420); this.snd('whoosh'); await this.wait(125); if (!live()) return;
       lodge();
       await this.wait(400); if (!live()) return;
       await this.moveTo(att, att.home.x, att.home.y, 55, 'walk', false); att.dir = d;
     } else {
-      this.setAnim(att, 'throw', true, 340); await this.wait(150); if (!live()) return;
+      this.setAnim(att, 'throw', true, 340); this.snd(wp.name === 'fireball' ? 'fire' : 'whoosh'); await this.wait(150); if (!live()) return;
       await this.throwAt(att, def, wp); if (!live()) return;
       lodge();
     }
