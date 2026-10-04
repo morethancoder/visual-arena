@@ -131,7 +131,9 @@ function openFight(m, scroll = true) {
     return;
   }
   duel.load(m, lookOf(m.a), lookOf(m.b));
-  if (scroll) $('duelBench').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (!scroll) return;
+  if (arenaIsFull()) showFightFull();
+  else $('duelBench').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 function interestingMatch(matches) {
   const score = m => {
@@ -510,14 +512,52 @@ function fitStages() {
     } else { cv.style.width = ''; cv.style.height = ''; }
   }
 }
+/** Leave full screen completely, even when the fight was stacked over the arena. */
+async function exitAllFullscreen() {
+  fsSwapped = false;
+  while (document.fullscreenElement) { try { await document.exitFullscreen(); } catch (e) { break; } }
+}
 function toggleFullscreen(id) {
   const el = $(id);
-  if (document.fullscreenElement) { document.exitFullscreen(); return; }
+  if (document.fullscreenElement) { exitAllFullscreen(); return; }
   if (el.requestFullscreen) el.requestFullscreen().catch(() => { el.classList.toggle('immersive'); fitStages(); });
   else { el.classList.toggle('immersive'); fitStages(); }
 }
+/** True when the colosseum fills the screen: browser full screen, the immersive fallback, or game mode. */
+function arenaIsFull() {
+  const st = $('arenaStage');
+  return document.fullscreenElement === st || st.classList.contains('immersive') && !st.hidden;
+}
+let fsSwapped = false;   // the fight was put full screen on top of the full screen arena
+/** Swap the full screen view from the colosseum to the fight panorama (a fight was clicked). */
+function showFightFull() {
+  if (typeof game !== 'undefined' && game.on) { game.showRun('fight'); return; }
+  const arena = $('arenaStage'), fight = $('duelStage');
+  if (document.fullscreenElement === arena && fight.requestFullscreen) {
+    fight.requestFullscreen().then(() => { fsSwapped = true; })
+      .catch(() => exitAllFullscreen().then(() => { fight.classList.add('immersive'); fitStages(); }));
+  } else { arena.classList.remove('immersive'); fight.classList.add('immersive'); fitStages(); }
+}
+/** And back from the fight to the colosseum. */
+function showArenaFull() {
+  if (typeof game !== 'undefined' && game.on) { game.showRun('arena'); return; }
+  const arena = $('arenaStage'), fight = $('duelStage');
+  if (fight.classList.contains('immersive')) {
+    fight.classList.remove('immersive');
+    arena.classList.add('immersive');
+    fitStages(); return;
+  }
+  if (document.fullscreenElement === fight) {
+    if (fsSwapped) { fsSwapped = false; document.exitFullscreen().catch(() => {}); }
+    else arena.requestFullscreen().catch(() => { arena.classList.add('immersive'); fitStages(); });
+  }
+}
+$('toArena').onclick = showArenaFull;
 for (const b of document.querySelectorAll('.fsbtn')) b.onclick = () => toggleFullscreen(b.dataset.fs);
-document.addEventListener('fullscreenchange', () => requestAnimationFrame(fitStages));
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) fsSwapped = false;
+  requestAnimationFrame(fitStages);
+});
 window.addEventListener('resize', fitStages);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') for (const id of ['arenaStage', 'duelStage']) if ($(id).classList.contains('immersive') && !$(id).closest('#game')) { $(id).classList.remove('immersive'); fitStages(); } });
 
